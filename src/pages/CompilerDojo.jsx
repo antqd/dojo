@@ -13,6 +13,7 @@ const CompilerDojo = () => {
     indirizzo: "",
     transato: "",
     altriPos: "",
+    altriPos: "",
     debito: "",
     credito: "",
     business: "",
