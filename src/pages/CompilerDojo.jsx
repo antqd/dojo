@@ -13,7 +13,6 @@ const CompilerDojo = () => {
     indirizzo: "",
     transato: "",
     altriPos: "",
-    altriPos: "",
     debito: "",
     credito: "",
     business: "",
@@ -37,6 +36,9 @@ const CompilerDojo = () => {
 
   const sigCanvasRef = useRef();
   const sigCanvasRef2 = useRef();
+
+  const API_CLIENTE = "https://emailsender-68kp.onrender.com/api/sendToClient"; // NUOVO endpoint
+
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -230,73 +232,54 @@ const CompilerDojo = () => {
     saveAs(pdfUrl, "modulo_compilato.pdf");
   };
 
-  const handleSubmitToBackoffice = async () => {
-    if (!pdfUrl) return alert("Genera prima il PDF.");
-    setSubmitStatus(null);
-    setIsSubmitting(true);
+const handleSubmitToClient = async () => {
+  if (!pdfUrl) return alert("Genera prima il PDF.");
+  setSubmitStatus(null);
+  setIsSubmitting(true);
 
-    try {
-      // Genera il PDF blob
-      const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
-      const pdfFile = new File([pdfBlob], "modulo.pdf", {
-        type: "application/pdf",
-      });
+  try {
+    // prendo il PDF generato e lo allego assieme ai file caricati
+    const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
+    const pdfFile = new File([pdfBlob], "modulo.pdf", { type: "application/pdf" });
+    const allegati = [pdfFile, ...files];
 
-      // Prepara tutti gli allegati includendo il PDF
-      const allegati = [pdfFile, ...files];
+    // converto in base64 (riuso la tua convertFileToBase64)
+    const encodedAttachments = await Promise.all(
+      allegati.map(async (file) => ({
+        filename: file.name,
+        base64: await convertFileToBase64(file),
+      }))
+    );
 
-      console.log("Allegati da convertire:", allegati.length);
+    // chiamata al NUOVO endpoint: invia agli interni del flusso "cliente" + ricevuta al candidato
+    const res = await fetch(API_CLIENTE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome: formData.nome,
+        email: formData.email,     // <- il cliente riceverà la conferma qui
+        telefono: formData.cell,
+        messaggio: formData.info,
+        allegati: encodedAttachments, // opzionale: togli se non vuoi inoltrare allegati
+      }),
+    });
 
-      // Converti tutti i file in base64
-      const encodedAttachments = await Promise.all(
-        allegati.map(async (file, index) => {
-          try {
-            console.log(`Convertendo file ${index + 1}:`, file.name, file.type);
-            const base64Content = await convertFileToBase64(file);
-            return {
-              name: file.name,
-              content: base64Content,
-              type: file.type,
-            };
-          } catch (error) {
-            console.error(`Errore conversione file ${file.name}:`, error);
-            throw new Error(
-              `Errore nella conversione del file ${file.name}: ${error.message}`
-            );
-          }
-        })
-      );
-
-      console.log("Invio email con allegati:", encodedAttachments.length);
-
-      const res = await fetch(
-        "https://emailsender-68kp.onrender.com/api/sendEmailAlt",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nome: formData.nome,
-            email: formData.email,
-            attachments: encodedAttachments,
-          }),
-        }
-      );
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Errore durante l'invio: ${res.status} - ${errorText}`);
-      }
-
-      setSubmitStatus("success");
-      alert("Email inviata correttamente.");
-    } catch (err) {
-      console.error("Errore completo:", err);
-      setSubmitStatus("error");
-      alert(`Errore durante l'invio: ${err.message}`);
-    } finally {
-      setIsSubmitting(false);
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Errore invio: ${res.status} - ${txt}`);
     }
-  };
+
+    setSubmitStatus("success");
+    alert("Email al cliente inviata correttamente.");
+  } catch (err) {
+    console.error("Errore invio cliente:", err);
+    setSubmitStatus("error");
+    alert(`Errore durante l'invio al cliente: ${err.message}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:py-8 sm:px-6 lg:px-8">
@@ -820,7 +803,7 @@ const CompilerDojo = () => {
           </button>
           <button
             type="button"
-            onClick={handleSubmitToBackoffice}
+            onClick={handleSubmitToClient}
             disabled={isSubmitting}
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-full shadow-md transition duration-200 transform hover:scale-105 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none"
           >
