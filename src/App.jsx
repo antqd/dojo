@@ -259,7 +259,7 @@ export default function App() {
               Chiedi subito al tuo Partner Manager
             </p>
             <a
-              href="mailto:partner@tuodominio.it?subject=Contatto%20Dojo"
+              href="mailto:megliodojo@gmail.com?subject=Contatto%20Dojo"
               className="rounded-full bg-white text-[#0B2B23] px-6 py-3 font-semibold shadow hover:opacity-90"
             >
               Contattaci
