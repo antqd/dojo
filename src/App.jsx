@@ -258,12 +258,12 @@ export default function App() {
             <p className="text-lg font-medium text-center md:text-left">
               Chiedi subito al tuo Partner Manager
             </p>
-            <a
-              href="mailto:megliodojo@gmail.com?subject=Contatto%20Dojo"
+            <Link
+              to="/contact-form"
               className="rounded-full bg-white text-[#0B2B23] px-6 py-3 font-semibold shadow hover:opacity-90"
             >
               Contattaci
-            </a>
+            </Link>
           </div>
         </div>
       </section>
