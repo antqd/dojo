@@ -39,7 +39,6 @@ const CompilerDojo = () => {
 
   const API_CLIENTE = "https://emailsender-68kp.onrender.com/api/sendToClient"; // NUOVO endpoint
 
-
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
       if (!file) {
@@ -232,83 +231,89 @@ const CompilerDojo = () => {
     saveAs(pdfUrl, "modulo_compilato.pdf");
   };
 
-async function handleSubmitToClient() {
-  if (!pdfUrl) {
-    alert("Genera prima il PDF.");
-    return;
-  }
-  setSubmitStatus(null);
-  setIsSubmitting(true);
+  const getFileSize = (f) => f?.size ?? 0;
 
-  try {
-    // PDF generato
-    const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
-    const pdfFile = new File([pdfBlob], "modulo.pdf", { type: "application/pdf" });
+  const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 
-    // Allegati totali
-    const allFiles = [pdfFile, ...files];
-
-    // Guard: limite dimensione totale
-    const totalBytes = allFiles.reduce((sum, f) => sum + getFileSize(f), 0);
-    if (totalBytes > MAX_TOTAL_BYTES) {
-      throw new Error(
-        `Allegati troppo pesanti (${(totalBytes / 1024 / 1024).toFixed(
-          2
-        )} MB). Riduci o invia meno file.`
-      );
+  async function handleSubmitToClient() {
+    if (!pdfUrl) {
+      alert("Genera prima il PDF.");
+      return;
     }
+    setSubmitStatus(null);
+    setIsSubmitting(true);
 
-    // Converto in base64 (solo il payload, senza "data:..;base64,")
-    const attachments = await Promise.all(
-      allFiles.map(async (file) => ({
-        filename: file.name,
-        base64: await convertFileToBase64(file),
-      }))
-    );
+    try {
+      // PDF generato
+      const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
+      const pdfFile = new File([pdfBlob], "modulo.pdf", {
+        type: "application/pdf",
+      });
 
-    const payload = {
-      nome: formData.nome?.trim() || "Senza nome",
-      email: formData.email?.trim() || "noreply@local",
-      telefono: formData.cell?.trim() || "",
-      messaggio: formData.info || "",
-      // ⚠️ NOME CORRETTO PER IL BACKEND
-      attachments,
-    };
+      // Allegati totali
+      const allFiles = [pdfFile, ...files];
 
-    // funzione con retry semplice
-    const postWithRetry = async (url, body, attempts = 2) => {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const text = await res.text(); // leggo sempre per poter loggare
-        if (!res.ok) throw new Error(`HTTP ${res.status} - ${text || "no body"}`);
-        return text;
-      } catch (e) {
-        if (attempts > 0) {
-          await new Promise((r) => setTimeout(r, 800));
-          return postWithRetry(url, body, attempts - 1);
-        }
-        throw e;
+      // Guard: limite dimensione totale
+      const totalBytes = allFiles.reduce((sum, f) => sum + getFileSize(f), 0);
+      if (totalBytes > MAX_TOTAL_BYTES) {
+        throw new Error(
+          `Allegati troppo pesanti (${(totalBytes / 1024 / 1024).toFixed(
+            2
+          )} MB). Riduci o invia meno file.`
+        );
       }
-    };
 
-    const respText = await postWithRetry(API_CLIENTE, payload);
+      // Converto in base64 (solo il payload, senza "data:..;base64,")
+      const attachments = await Promise.all(
+        allFiles.map(async (file) => ({
+          filename: file.name,
+          base64: await convertFileToBase64(file),
+        }))
+      );
 
-    console.log("Risposta server:", respText);
-    setSubmitStatus("success");
-    alert("Email inviata correttamente.");
-  } catch (err) {
-    console.error("Errore invio cliente:", err);
-    setSubmitStatus("error");
-    alert(`Errore durante l'invio: ${err.message}`);
-  } finally {
-    setIsSubmitting(false);
+      const payload = {
+        nome: formData.nome?.trim() || "Senza nome",
+        email: formData.email?.trim() || "noreply@local",
+        telefono: formData.cell?.trim() || "",
+        messaggio: formData.info || "",
+        // ⚠️ NOME CORRETTO PER IL BACKEND
+        attachments,
+      };
+
+      // funzione con retry semplice
+      const postWithRetry = async (url, body, attempts = 2) => {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const text = await res.text(); // leggo sempre per poter loggare
+          if (!res.ok)
+            throw new Error(`HTTP ${res.status} - ${text || "no body"}`);
+          return text;
+        } catch (e) {
+          if (attempts > 0) {
+            await new Promise((r) => setTimeout(r, 800));
+            return postWithRetry(url, body, attempts - 1);
+          }
+          throw e;
+        }
+      };
+
+      const respText = await postWithRetry(API_CLIENTE, payload);
+
+      console.log("Risposta server:", respText);
+      setSubmitStatus("success");
+      alert("Email inviata correttamente.");
+    } catch (err) {
+      console.error("Errore invio cliente:", err);
+      setSubmitStatus("error");
+      alert(`Errore durante l'invio: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
-}
-
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:py-8 sm:px-6 lg:px-8">
