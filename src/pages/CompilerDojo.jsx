@@ -422,7 +422,7 @@ const handleSubmitToClient = async () => {
 
           <textarea
             name="info"
-            placeholder="Transato mensile inferiore a 5000€"
+            placeholder="Transato mensile credit e debit"
             value={formData.info}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base h-20 sm:h-24 resize-none"

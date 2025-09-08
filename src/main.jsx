@@ -1,23 +1,27 @@
-// main.jsx
+// src/main.jsx
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 
-import App from "./App.jsx";
+// Pagine
+import App from "./App.jsx"; // landing page
 import CompilerDojo from "./pages/CompilerDojo.jsx";
 import ContactForm from "./pages/ContactForm.jsx";
 
-const router = createBrowserRouter([
-  { path: "/", element: <App /> },
-  { path: "/compiler-dojo", element: <CompilerDojo /> },
-  { path: "/contact-form", element: <ContactForm /> },
-  // opzionale: 404
-  { path: "*", element: <div style={{ padding: 24 }}>Pagina non trovata</div> },
-]);
-
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/compiler-dojo" element={<CompilerDojo />} />
+        <Route path="/contact-form" element={<ContactForm />} />
+        {/* 404 fallback */}
+        <Route
+          path="*"
+          element={<div style={{ padding: 24 }}>Pagina non trovata</div>}
+        />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
