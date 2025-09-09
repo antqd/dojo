@@ -174,7 +174,7 @@ const CompilerDojo = () => {
     drawText(formData.transatoCredito, 250, 710, 18);
     drawText(formData.transatoDebito, 250, 675, 18);
     drawText(formData.scontrinoMedio, 570, 710, 18);
-    drawText(formData.scontrinoMassimo, 580, 675, 18);
+    drawText(formData.scontrinoMassimo, 585, 675, 18);
 
     // firme
     const firma1 = getFirmaImage();
