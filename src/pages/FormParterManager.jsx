@@ -1,10 +1,8 @@
-// src/pages/OnboardingAzienda.jsx
 import React, { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 const API_URL = "https://emailsender-68kp.onrender.com/api/diventa-partner-manager";
 
- // <<-- cambia qui
 
 export default function OnboardingAzienda() {
   const [form, setForm] = useState({
