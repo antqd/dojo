@@ -181,7 +181,7 @@ const CompilerDojo = () => {
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      page.drawImage(png, { x: 85, y: 105, width: 120, height: 30 });
+      page.drawImage(png, { x: 85, y: 105, width: 150, height: 50 });
     }
     const firma2 = sigCanvasRef2.current
       ?.getTrimmedCanvas()
@@ -189,7 +189,7 @@ const CompilerDojo = () => {
     if (firma2) {
       const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
       const png2 = await pdfDoc.embedPng(bytes2);
-      page.drawImage(png2, { x: 485, y: 105, width: 120, height: 30 });
+      page.drawImage(png2, { x: 485, y: 105, width: 150, height: 50 });
     }
 
     const pdfBytes = await pdfDoc.save();
