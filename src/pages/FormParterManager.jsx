@@ -1,8 +1,9 @@
+// src/pages/OnboardingAzienda.jsx
 import React, { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-const API_URL = "https://emailsender-68kp.onrender.com/api/diventa-partner-manager";
-
+const API_URL =
+  "https://emailsender-68kp.onrender.com/api/diventa-partner-manager";
 
 export default function OnboardingAzienda() {
   const [form, setForm] = useState({
@@ -16,15 +17,15 @@ export default function OnboardingAzienda() {
     iban: "",
   });
 
-  // Allegati
-  const [visura, setVisura] = useState(null);
-  const [docId, setDocId] = useState(null);
-  const [codFiscale, setCodFiscale] = useState(null);
+  // Allegati (ora multipli)
+  const [visura, setVisura] = useState([]); // File[]
+  const [docId, setDocId] = useState([]); // File[]
+  const [codFiscale, setCodFiscale] = useState([]); // File[]
 
-  // Previews
-  const [visuraPreview, setVisuraPreview] = useState(null);
-  const [docIdPreview, setDocIdPreview] = useState(null);
-  const [codFiscalePreview, setCodFiscalePreview] = useState(null);
+  // Previews multipli
+  const [visuraPreview, setVisuraPreview] = useState([]); // {url,isImage,isPdf,name,size}[]
+  const [docIdPreview, setDocIdPreview] = useState([]);
+  const [codFiscalePreview, setCodFiscalePreview] = useState([]);
 
   // Firma su canvas
   const canvasRef = useRef(null);
@@ -47,33 +48,29 @@ export default function OnboardingAzienda() {
       r.readAsDataURL(f);
     });
 
-  const mkPreview = (file) => {
-    if (!file) return null;
-    const url = URL.createObjectURL(file);
-    const isImage = /^image\//.test(file.type);
-    const isPdf = file.type === "application/pdf";
-    return { url, isImage, isPdf, name: file.name, size: file.size };
-  };
+  const mkPreviews = (files) =>
+    (files || []).map((file) => {
+      const url = URL.createObjectURL(file);
+      const isImage = /^image\//.test(file.type);
+      const isPdf = file.type === "application/pdf";
+      return { url, isImage, isPdf, name: file.name, size: file.size };
+    });
 
   useEffect(() => {
-    if (visura) setVisuraPreview(mkPreview(visura));
-    else setVisuraPreview(null);
-    return () => visuraPreview?.url && URL.revokeObjectURL(visuraPreview.url);
+    setVisuraPreview(mkPreviews(visura));
+    return () => visuraPreview.forEach((p) => URL.revokeObjectURL(p.url));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visura]);
 
   useEffect(() => {
-    if (docId) setDocIdPreview(mkPreview(docId));
-    else setDocIdPreview(null);
-    return () => docIdPreview?.url && URL.revokeObjectURL(docIdPreview.url);
+    setDocIdPreview(mkPreviews(docId));
+    return () => docIdPreview.forEach((p) => URL.revokeObjectURL(p.url));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docId]);
 
   useEffect(() => {
-    if (codFiscale) setCodFiscalePreview(mkPreview(codFiscale));
-    else setCodFiscalePreview(null);
-    return () =>
-      codFiscalePreview?.url && URL.revokeObjectURL(codFiscalePreview.url);
+    setCodFiscalePreview(mkPreviews(codFiscale));
+    return () => codFiscalePreview.forEach((p) => URL.revokeObjectURL(p.url));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codFiscale]);
 
@@ -82,7 +79,7 @@ export default function OnboardingAzienda() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    // sfondo bianco per esport
+    // sfondo bianco per export
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.lineWidth = 2;
@@ -147,7 +144,7 @@ export default function OnboardingAzienda() {
     if (!form.email.trim() || !form.email.includes("@"))
       return "Inserisci una email valida.";
     if (!form.iban.trim()) return "Inserisci l'IBAN.";
-    if (!visura || !docId || !codFiscale)
+    if (!visura.length || !docId.length || !codFiscale.length)
       return "Allega tutti i documenti richiesti.";
     if (!hasSignature) return "Fornisci la firma.";
     return "";
@@ -166,27 +163,24 @@ export default function OnboardingAzienda() {
 
     setSending(true);
     try {
+      const toPayloadFiles = async (arr) =>
+        Promise.all(
+          arr.map(async (f) => ({
+            filename: f.name,
+            base64: await toBase64(f),
+            mime: f.type,
+          }))
+        );
+
       const allegati = {
-        visura: {
-          filename: visura.name,
-          base64: await toBase64(visura),
-          mime: visura.type,
-        },
-        documento_identita: {
-          filename: docId.name,
-          base64: await toBase64(docId),
-          mime: docId.type,
-        },
-        codice_fiscale: {
-          filename: codFiscale.name,
-          base64: await toBase64(codFiscale),
-          mime: codFiscale.type,
-        },
+        visura: await toPayloadFiles(visura), // array
+        documento_identita: await toPayloadFiles(docId), // array
+        codice_fiscale: await toPayloadFiles(codFiscale), // array
         firma: {
           filename: "firma.png",
           base64: exportSignatureBase64(),
           mime: "image/png",
-        },
+        }, // singola
       };
 
       const res = await fetch(API_URL, {
@@ -212,12 +206,12 @@ export default function OnboardingAzienda() {
         email: "",
         iban: "",
       });
-      setVisura(null);
-      setDocId(null);
-      setCodFiscale(null);
-      setVisuraPreview(null);
-      setDocIdPreview(null);
-      setCodFiscalePreview(null);
+      setVisura([]);
+      setDocId([]);
+      setCodFiscale([]);
+      setVisuraPreview([]);
+      setDocIdPreview([]);
+      setCodFiscalePreview([]);
       clearSignature();
     } catch (err) {
       setError(err.message || "Errore durante l'invio.");
@@ -228,65 +222,86 @@ export default function OnboardingAzienda() {
 
   const UploadBox = ({
     label,
-    file,
-    setFile,
-    preview,
+    files, // File[]
+    setFiles, // (File[]) => void
+    previews, // {url,isImage,isPdf,name,size}[]
     accept = ".pdf,.jpg,.jpeg,.png",
-  }) => (
-    <div className="rounded-xl border border-black/5 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-medium">{label}</div>
-          <p className="text-xs text-[#2B4A42]/70">
-            Formati: PDF, JPG, PNG • max ~10MB
-          </p>
-        </div>
-        <label className="inline-flex cursor-pointer rounded-full border border-[#1BA97F] text-[#1BA97F] px-3 py-1.5 text-xs font-medium hover:bg-[#1BA97F]/5">
-          Carica
-          <input
-            type="file"
-            className="hidden"
-            accept={accept}
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-        </label>
-      </div>
+  }) => {
+    const onPick = (e) => {
+      const picked = Array.from(e.target.files || []);
+      if (!picked.length) return;
+      setFiles((prev) => [...prev, ...picked]); // append senza limiti
+    };
+    const removeAt = (idx) =>
+      setFiles((prev) => prev.filter((_, i) => i !== idx));
 
-      {/* Preview */}
-      {file ? (
-        <div className="mt-3 grid grid-cols-[80px_1fr] gap-3 items-center">
-          <div className="w-20 h-20 rounded-lg overflow-hidden ring-1 ring-black/5 bg-[#F6F7F6] flex items-center justify-center">
-            {preview?.isImage ? (
-              <img src={preview.url} alt="preview" className="w-full h-full object-cover" />
-            ) : preview?.isPdf ? (
-              <span className="text-[10px] text-[#0B2B23] px-2 text-center">
-                Anteprima PDF non disponibile<br/>({file.name})
-              </span>
-            ) : (
-              <span className="text-xs text-[#0B2B23]">File</span>
-            )}
+    return (
+      <div className="rounded-xl border border-black/5 bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium">{label}</div>
+            <p className="text-xs text-[#2B4A42]/70">
+              Formati: PDF, JPG, PNG • senza limiti di numero
+            </p>
           </div>
-          <div className="text-sm">
-            <div className="font-medium truncate">{file.name}</div>
-            <div className="text-xs text-[#2B4A42]/70">
-              {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || "file"}
-            </div>
-            <button
-              type="button"
-              onClick={() => setFile(null)}
-              className="mt-2 text-xs text-red-600 hover:underline"
-            >
-              Rimuovi
-            </button>
+          <label className="inline-flex cursor-pointer rounded-full border border-[#1BA97F] text-[#1BA97F] px-3 py-1.5 text-xs font-medium hover:bg-[#1BA97F]/5">
+            Aggiungi
+            <input
+              type="file"
+              className="hidden"
+              multiple
+              accept={accept}
+              onChange={onPick}
+            />
+          </label>
+        </div>
+
+        {files.length ? (
+          <ul className="mt-3 space-y-2">
+            {previews.map((p, idx) => (
+              <li
+                key={idx}
+                className="grid grid-cols-[80px_1fr_auto] gap-3 items-center"
+              >
+                <div className="w-20 h-20 rounded-lg overflow-hidden ring-1 ring-black/5 bg-[#F6F7F6] flex items-center justify-center">
+                  {p.isImage ? (
+                    <img
+                      src={p.url}
+                      alt="preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : p.isPdf ? (
+                    <span className="text-[10px] text-[#0B2B23] px-2 text-center">
+                      PDF
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[#0B2B23]">FILE</span>
+                  )}
+                </div>
+                <div className="text-sm min-w-0">
+                  <div className="font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-[#2B4A42]/70">
+                    {(p.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeAt(idx)}
+                  className="text-xs text-red-600 hover:underline"
+                >
+                  Rimuovi
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-3 rounded-lg border border-dashed border-black/10 p-3 text-xs text-[#2B4A42]/70">
+            Nessun file selezionato
           </div>
-        </div>
-      ) : (
-        <div className="mt-3 rounded-lg border border-dashed border-black/10 p-3 text-xs text-[#2B4A42]/70">
-          Nessun file selezionato
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#F6F7F6] text-[#0B2B23]">
@@ -315,12 +330,11 @@ export default function OnboardingAzienda() {
               Onboarding Azienda
             </p>
             <h1 className="text-4xl font-semibold leading-tight">
-              Diventa{" "}
-              <span className="text-[#1BA97F]">Partner Manager</span>
+              Diventa <span className="text-[#1BA97F]">Partner Manager</span>
             </h1>
             <p className="mt-3 text-[#2B4A42] max-w-xl">
-              Compila i dati anagrafici e carica i documenti richiesti.
-              Firma direttamente qui sotto per completare la richiesta.
+              Compila i dati anagrafici e carica i documenti richiesti. Firma
+              direttamente qui sotto per completare la richiesta.
             </p>
           </div>
           <div className="hidden lg:block">
@@ -362,7 +376,9 @@ export default function OnboardingAzienda() {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1">Comune di residenza *</label>
+              <label className="block text-sm mb-1">
+                Comune di residenza *
+              </label>
               <input
                 name="comune"
                 value={form.comune}
@@ -426,25 +442,25 @@ export default function OnboardingAzienda() {
             </div>
           </div>
 
-          {/* Allegati */}
+          {/* Allegati (multi-file) */}
           <div className="mt-8 grid lg:grid-cols-3 gap-4">
             <UploadBox
               label="Visura camerale *"
-              file={visura}
-              setFile={setVisura}
-              preview={visuraPreview}
+              files={visura}
+              setFiles={setVisura}
+              previews={visuraPreview}
             />
             <UploadBox
               label="Documento d'identità *"
-              file={docId}
-              setFile={setDocId}
-              preview={docIdPreview}
+              files={docId}
+              setFiles={setDocId}
+              previews={docIdPreview}
             />
             <UploadBox
               label="Codice fiscale *"
-              file={codFiscale}
-              setFile={setCodFiscale}
-              preview={codFiscalePreview}
+              files={codFiscale}
+              setFiles={setCodFiscale}
+              previews={codFiscalePreview}
             />
           </div>
 
