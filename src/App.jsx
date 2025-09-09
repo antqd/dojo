@@ -103,7 +103,7 @@ export default function App() {
             to="/compiler-dojo"
             className="rounded-full bg-[#1BA97F] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
           >
-            Compila il modulo DOJO
+            Attiva Dojo
           </Link>
         </div>
       </header>
@@ -143,10 +143,10 @@ export default function App() {
 
             <div className="hero-stagger mt-8 flex gap-3">
               <Link
-                to="/compiler-dojo"
+                to="/form-partner-manager"
                 className="rounded-full bg-[#1BA97F] px-5 py-3 text-white font-medium shadow hover:brightness-110"
               >
-                Compila il modulo DOJO
+                Diventa Partner Manager
               </Link>
               <a
                 href="#features"
