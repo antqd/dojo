@@ -146,7 +146,7 @@ export default function App() {
                 to="/form-partner-manager"
                 className="rounded-full bg-[#1BA97F] px-5 py-3 text-white font-medium shadow hover:brightness-110"
               >
-                Diventa Referral Partner 
+                Diventa Referral Partner
               </Link>
               <a
                 href="#features"
@@ -251,6 +251,54 @@ export default function App() {
           </div>
 
           {/* CTA banner */}
+          {/* ===== CATALOGHI DOJO (preview + download) ===== */}
+          <div className="reveal mt-12">
+            <h3 className="text-2xl sm:text-3xl font-semibold">
+              Cataloghi Dojo
+            </h3>
+            <p className="mt-2 text-[#2B4A42]">
+              Sfoglia un’anteprima e scarica i cataloghi in PDF.
+            </p>
+
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { title: "Modello 3", file: "/modello3.pdf" },
+                { title: "Modello 4", file: "/modello4.pdf" },
+                { title: "Modello 5", file: "/modello5.pdf" },
+              ].map(({ title, file }, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl bg-white border border-black/5 shadow-sm overflow-hidden flex flex-col"
+                >
+                  {/* Preview PDF: usa <iframe>. Se vuoi più compatibilità, puoi passare a <object>. */}
+                  <div className="aspect-[4/5] bg-[#F6F7F6]">
+                    <iframe
+                      src={`${file}#view=FitH`}
+                      title={`Anteprima ${title}`}
+                      className="w-full h-full"
+                    />
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold">{title}</div>
+                      <div className="text-xs text-[#2B4A42]/70">
+                        PDF • anteprima integrata
+                      </div>
+                    </div>
+                    <a
+                      href={file}
+                      download
+                      className="rounded-full bg-[#1BA97F] text-white px-4 py-2 text-sm font-medium hover:brightness-110"
+                    >
+                      Scarica
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div
             id="contatti"
             className="reveal mt-10 rounded-2xl bg-[#1BA97F] text-white px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4"
@@ -483,8 +531,6 @@ export default function App() {
       {/* 5) NPS / TRUSTPILOT */}
       <section id="nps" className="bg-[#F6F7F6]">
         <div className="mx-auto max-w-6xl px-4 py-12 space-y-8">
-
-
           <div className="rounded-[28px] bg-[#FFD0C5] p-6">
             <h3 className="text-2xl font-semibold">Net Promoter Score</h3>
             <div className="mt-5 space-y-4">
