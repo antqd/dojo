@@ -524,7 +524,7 @@ export default function App() {
       <footer className="py-10 border-t border-black/5 bg-white">
         <div className="mx-auto max-w-6xl px-4 text-sm text-[#2B4A42]">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <img src="/images/logo.png" alt="Dojo" className="h-5" />
+            <img src="/images/logo.png" alt="Dojo" className="h-7" />
             <div className="flex items-center gap-3 opacity-70">
               <span>© {new Date().getFullYear()} Dojo</span>
               <span>•</span>
