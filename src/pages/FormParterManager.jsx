@@ -330,7 +330,7 @@ export default function OnboardingAzienda() {
               Onboarding Azienda
             </p>
             <h1 className="text-4xl font-semibold leading-tight">
-              Diventa <span className="text-[#1BA97F]">Partner Manager</span>
+              Diventa <span className="text-[#1BA97F]">Referral Partner</span>
             </h1>
             <p className="mt-3 text-[#2B4A42] max-w-xl">
               Compila i dati anagrafici e carica i documenti richiesti. Firma

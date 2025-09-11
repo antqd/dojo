@@ -146,7 +146,7 @@ export default function App() {
                 to="/form-partner-manager"
                 className="rounded-full bg-[#1BA97F] px-5 py-3 text-white font-medium shadow hover:brightness-110"
               >
-                Diventa Partner Manager
+                Diventa Referral Partner 
               </Link>
               <a
                 href="#features"
@@ -256,7 +256,7 @@ export default function App() {
             className="reveal mt-10 rounded-2xl bg-[#1BA97F] text-white px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4"
           >
             <p className="text-lg font-medium text-center md:text-left">
-              Chiedi subito al tuo Partner Manager
+              Chiedi subito al tuo Referral Partner
             </p>
             <Link
               to="/contact-form"
