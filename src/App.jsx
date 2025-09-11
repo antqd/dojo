@@ -67,7 +67,7 @@ export default function App() {
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-black/5">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/images/logo.png" alt="DOJO" className="h-8" />
+            <img src="/images/logo.png" alt="DOJO" className="h-14" />
             <span className="sr-only">Dojo</span>
           </div>
 
