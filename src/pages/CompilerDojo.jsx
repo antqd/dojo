@@ -444,6 +444,191 @@ const CompilerDojo = () => {
 
         {/* Upload documenti (come avevi) */}
         {/* ... (resto identico al tuo codice per upload/preview/riepilogo) ... */}
+        <div className="space-y-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-blue-900 text-center">
+            Caricamento Documenti
+          </h2>
+
+          {/* Sezione 1 - Visura Camerale */}
+          <div className="bg-white border border-blue-200 rounded-lg p-6 shadow-sm">
+            <div className="space-y-4">
+              <h3 className="text-lg sm:text-xl font-semibold text-blue-900 flex items-center gap-2">
+                📋 Visura Camerale
+              </h3>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => handleFileChange(e, "visura-camerale")}
+                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4
+                 file:rounded-full file:border-0
+                 file:text-sm file:font-semibold
+                 file:bg-blue-50 file:text-blue-700
+                 hover:file:bg-blue-100"
+              />
+              <div className="flex flex-wrap gap-4">
+                {getFilesBySection("visura-camerale").map((preview, idx) => (
+                  <div
+                    key={`visura-${idx}`}
+                    className="border border-gray-300 p-2 rounded-lg w-40 relative"
+                  >
+                    <button
+                      onClick={() => removeFile(filePreviews.indexOf(preview))}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                    <p className="text-xs font-medium break-words">
+                      {preview.name}
+                    </p>
+                    {preview.type.startsWith("image/") ? (
+                      <img
+                        src={preview.src}
+                        alt="Anteprima"
+                        className="mt-2 max-h-32 w-full object-contain"
+                      />
+                    ) : (
+                      <div className="mt-2 h-32 bg-gray-100 flex items-center justify-center rounded">
+                        <p className="text-xs text-gray-600 text-center italic">
+                          Anteprima non disponibile
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sezione 2 - Documenti Identità e Codice Fiscale */}
+          <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm">
+            <div className="space-y-4">
+              <h3 className="text-lg sm:text-xl font-semibold text-green-900 flex items-center gap-2">
+                🆔 Documenti Identità e Codice Fiscale
+              </h3>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => handleFileChange(e, "documenti-identita")}
+                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4
+                 file:rounded-full file:border-0
+                 file:text-sm file:font-semibold
+                 file:bg-green-50 file:text-green-700
+                 hover:file:bg-green-100"
+              />
+              <div className="flex flex-wrap gap-4">
+                {getFilesBySection("documenti-identita").map((preview, idx) => (
+                  <div
+                    key={`identita-${idx}`}
+                    className="border border-gray-300 p-2 rounded-lg w-40 relative"
+                  >
+                    <button
+                      onClick={() => removeFile(filePreviews.indexOf(preview))}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                    <p className="text-xs font-medium break-words">
+                      {preview.name}
+                    </p>
+                    {preview.type.startsWith("image/") ? (
+                      <img
+                        src={preview.src}
+                        alt="Anteprima"
+                        className="mt-2 max-h-32 w-full object-contain"
+                      />
+                    ) : (
+                      <div className="mt-2 h-32 bg-gray-100 flex items-center justify-center rounded">
+                        <p className="text-xs text-gray-600 text-center italic">
+                          Anteprima non disponibile
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sezione 3 - Documento IBAN */}
+          <div className="bg-white border border-purple-200 rounded-lg p-6 shadow-sm">
+            <div className="space-y-4">
+              <h3 className="text-lg sm:text-xl font-semibold text-purple-900 flex items-center gap-2">
+                🏦 Documento comprovante IBAN
+              </h3>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => handleFileChange(e, "documento-iban")}
+                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4
+                 file:rounded-full file:border-0
+                 file:text-sm file:font-semibold
+                 file:bg-purple-50 file:text-purple-700
+                 hover:file:bg-purple-100"
+              />
+              <div className="flex flex-wrap gap-4">
+                {getFilesBySection("documento-iban").map((preview, idx) => (
+                  <div
+                    key={`iban-${idx}`}
+                    className="border border-gray-300 p-2 rounded-lg w-40 relative"
+                  >
+                    <button
+                      onClick={() => removeFile(filePreviews.indexOf(preview))}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                    <p className="text-xs font-medium break-words">
+                      {preview.name}
+                    </p>
+                    {preview.type.startsWith("image/") ? (
+                      <img
+                        src={preview.src}
+                        alt="Anteprima"
+                        className="mt-2 max-h-32 w-full object-contain"
+                      />
+                    ) : (
+                      <div className="mt-2 h-32 bg-gray-100 flex items-center justify-center rounded">
+                        <p className="text-xs text-gray-600 text-center italic">
+                          Anteprima non disponibile
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Riepilogo tutti i file */}
+          {files.length > 0 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Riepilogo Documenti Caricati ({files.length})
+              </h3>
+              <div className="space-y-2">
+                {files.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center bg-white p-3 rounded border"
+                  >
+                    <div>
+                      <span className="font-medium">{file.name}</span>
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({file.section})
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Firme / Azioni / Anteprima — identici al tuo file, non ripetuti per brevità */}
         {/* Sostituisci i blocchi sottostanti con gli stessi che hai già nel file originale */}
