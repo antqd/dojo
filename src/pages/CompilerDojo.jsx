@@ -45,7 +45,7 @@ const CompilerDojo = () => {
   const sigCanvasRef = useRef();
   const sigCanvasRef2 = useRef();
 
-  const API_CLIENTE = "https://emailsender-68kp.onrender.com/api/sendToClient";
+  const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-const API_CLIENTE = "https://emailsender-68kp.onrender.com/api/sendToClient";
+const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
 
 export default function ContactDojo() {
   const [form, setForm] = useState({
