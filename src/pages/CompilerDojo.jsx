@@ -31,24 +31,27 @@ const CompilerDojo = () => {
   function computeSimulation() {
     const transato = parseFloat(String(sim.transato).replace(",", ".")) || 0;
     const scontrino = parseFloat(String(sim.scontrino).replace(",", ".")) || 0;
-    const attualeVal = parseFloat(String(sim.attualeValore).replace(",", ".")) || 0;
+    const attualeVal =
+      parseFloat(String(sim.attualeValore).replace(",", ".")) || 0;
     const dojoVal = parseFloat(String(sim.dojoValore).replace(",", ".")) || 0;
 
     const nTx = scontrino > 0 ? transato / scontrino : 0;
 
-    const costoAttuale = sim.mode === "fissa"
-      ? nTx * attualeVal
-      : transato * (attualeVal / 100);
+    const costoAttuale =
+      sim.mode === "fissa" ? nTx * attualeVal : transato * (attualeVal / 100);
 
-    const costoDojo = sim.mode === "fissa"
-      ? nTx * dojoVal
-      : transato * (dojoVal / 100);
+    const costoDojo =
+      sim.mode === "fissa" ? nTx * dojoVal : transato * (dojoVal / 100);
 
-    const canoneAtt = parseFloat(String(formData.canone || 0).replace(",", ".")) || 0;
-    const canoneDojo = parseFloat(String(formData.canonedojo || 0).replace(",", ".")) || 0;
+    const canoneAtt =
+      parseFloat(String(formData.canone || 0).replace(",", ".")) || 0;
+    const canoneDojo =
+      parseFloat(String(formData.canonedojo || 0).replace(",", ".")) || 0;
 
-    const costoAttTot = sim.includiCanone ? (costoAttuale + canoneAtt) : costoAttuale;
-    const costoDojoTot = sim.includiCanone ? (costoDojo + canoneDojo) : costoDojo;
+    const costoAttTot = sim.includiCanone
+      ? costoAttuale + canoneAtt
+      : costoAttuale;
+    const costoDojoTot = sim.includiCanone ? costoDojo + canoneDojo : costoDojo;
 
     const risparmio = Math.max(0, costoAttTot - costoDojoTot);
     const rispPerc = costoAttTot > 0 ? (risparmio / costoAttTot) * 100 : 0;
@@ -491,14 +494,17 @@ const CompilerDojo = () => {
           </div>
         </div>
 
-
         {/* === Simulatore Risparmio === */}
         <div className="space-y-4 border border-blue-200 rounded-lg p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">Simulatore risparmio</h3>
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Simulatore risparmio
+          </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Transato mensile (€)</label>
+              <label className="block text-sm text-gray-700 mb-1">
+                Transato mensile (€)
+              </label>
               <input
                 name="transato"
                 type="number"
@@ -511,10 +517,11 @@ const CompilerDojo = () => {
               />
             </div>
 
-            
-
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Scontrino medio (€) {sim.mode === "fissa" ? "(obbligatorio)" : "(opzionale)"}</label>
+              <label className="block text-sm text-gray-700 mb-1">
+                Scontrino medio (€){" "}
+                {sim.mode === "fissa" ? "(obbligatorio)" : "(opzionale)"}
+              </label>
               <input
                 name="scontrino"
                 type="number"
@@ -528,7 +535,9 @@ const CompilerDojo = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Tariffa ATTUALE {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}</label>
+              <label className="block text-sm text-gray-700 mb-1">
+                Tariffa ATTUALE {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}
+              </label>
               <input
                 name="attualeValore"
                 type="number"
@@ -537,12 +546,16 @@ const CompilerDojo = () => {
                 value={sim.attualeValore}
                 onChange={handleSimChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder={sim.mode === "percentuale" ? "es. 1.95" : "es. 0.15"}
+                placeholder={
+                  sim.mode === "percentuale" ? "es. 1.95" : "es. 0.15"
+                }
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Tariffa DOJO {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}</label>
+              <label className="block text-sm text-gray-700 mb-1">
+                Tariffa DOJO {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}
+              </label>
               <input
                 name="dojoValore"
                 type="number"
@@ -551,7 +564,9 @@ const CompilerDojo = () => {
                 value={sim.dojoValore}
                 onChange={handleSimChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder={sim.mode === "percentuale" ? "es. 0.80" : "es. 0.05"}
+                placeholder={
+                  sim.mode === "percentuale" ? "es. 0.80" : "es. 0.05"
+                }
               />
             </div>
 
@@ -563,7 +578,8 @@ const CompilerDojo = () => {
                   checked={sim.includiCanone}
                   onChange={handleSimChange}
                 />
-                Includi canoni mensili (usa "Canone mensile" e "Canone mensile Dojo" sopra)
+                Includi canoni mensili (usa "Canone mensile" e "Canone mensile
+                Dojo" sopra)
               </label>
             </div>
           </div>
@@ -575,17 +591,29 @@ const CompilerDojo = () => {
               <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-gray-600">Costo ATTUALE {sim.includiCanone ? "+ canone" : ""}</p>
-                    <p className="text-lg font-semibold">{euro(r.costoAttTot)}</p>
+                    <p className="text-xs text-gray-600">
+                      Costo ATTUALE {sim.includiCanone ? "+ canone" : ""}
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {euro(r.costoAttTot)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Costo con DOJO {sim.includiCanone ? "+ canone" : ""}</p>
-                    <p className="text-lg font-semibold">{euro(r.costoDojoTot)}</p>
+                    <p className="text-xs text-gray-600">
+                      Costo con DOJO {sim.includiCanone ? "+ canone" : ""}
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {euro(r.costoDojoTot)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Risparmio</p>
-                    <p className="text-2xl font-bold text-green-700">{euro(r.risparmio)}</p>
-                    <p className="text-xs text-green-700 font-medium">({r.rispPerc.toFixed(1)}%)</p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {euro(r.risparmio)}
+                    </p>
+                    <p className="text-xs text-green-700 font-medium">
+                      ({r.rispPerc.toFixed(1)}%)
+                    </p>
                   </div>
                 </div>
 
@@ -594,15 +622,45 @@ const CompilerDojo = () => {
                   <p className="font-medium">Come è stato calcolato:</p>
                   {sim.mode === "percentuale" ? (
                     <>
-                      <p>• Numero transazioni stimato = {r.scontrino > 0 ? r.nTx.toFixed(1) : "n/d"} {r.scontrino > 0 ? `(transato ${euro(r.transato)} / scontrino medio ${euro(r.scontrino)})` : "(non necessario)"}</p>
-                      <p>• Costo ATTUALE = transato × {Number(sim.attualeValore || 0)}% = {euro(r.costoAttuale)}</p>
-                      <p>• Costo DOJO = transato × {Number(sim.dojoValore || 0)}% = {euro(r.costoDojo)}</p>
+                      <p>
+                        • Numero transazioni stimato ={" "}
+                        {r.scontrino > 0 ? r.nTx.toFixed(1) : "n/d"}{" "}
+                        {r.scontrino > 0
+                          ? `(transato ${euro(
+                              r.transato
+                            )} / scontrino medio ${euro(r.scontrino)})`
+                          : "(non necessario)"}
+                      </p>
+                      <p>
+                        • Costo ATTUALE = transato ×{" "}
+                        {Number(sim.attualeValore || 0)}% ={" "}
+                        {euro(r.costoAttuale)}
+                      </p>
+                      <p>
+                        • Costo DOJO = transato × {Number(sim.dojoValore || 0)}%
+                        = {euro(r.costoDojo)}
+                      </p>
                     </>
                   ) : (
                     <>
-                      <p>• Numero transazioni stimato = transato / scontrino = {r.scontrino > 0 ? `${euro(r.transato)} / ${euro(r.scontrino)} = ${r.nTx.toFixed(1)}` : "— (inserisci lo scontrino medio)"}</p>
-                      <p>• Costo ATTUALE = n.transazioni × {euro(Number(sim.attualeValore || 0))} = {euro(r.costoAttuale)}</p>
-                      <p>• Costo DOJO = n.transazioni × {euro(Number(sim.dojoValore || 0))} = {euro(r.costoDojo)}</p>
+                      <p>
+                        • Numero transazioni stimato = transato / scontrino ={" "}
+                        {r.scontrino > 0
+                          ? `${euro(r.transato)} / ${euro(
+                              r.scontrino
+                            )} = ${r.nTx.toFixed(1)}`
+                          : "— (inserisci lo scontrino medio)"}
+                      </p>
+                      <p>
+                        • Costo ATTUALE = n.transazioni ×{" "}
+                        {euro(Number(sim.attualeValore || 0))} ={" "}
+                        {euro(r.costoAttuale)}
+                      </p>
+                      <p>
+                        • Costo DOJO = n.transazioni ×{" "}
+                        {euro(Number(sim.dojoValore || 0))} ={" "}
+                        {euro(r.costoDojo)}
+                      </p>
                     </>
                   )}
                   {sim.includiCanone && (
@@ -611,7 +669,11 @@ const CompilerDojo = () => {
                       <p>• + Canone DOJO: {euro(r.canoneDojo)}</p>
                     </>
                   )}
-                  <p className="font-medium">• Risparmio = Costo ATTUALE{sim.includiCanone ? " + canone" : ""} − Costo DOJO{sim.includiCanone ? " + canone" : ""} = {euro(r.risparmio)}</p>
+                  <p className="font-medium">
+                    • Risparmio = Costo ATTUALE
+                    {sim.includiCanone ? " + canone" : ""} − Costo DOJO
+                    {sim.includiCanone ? " + canone" : ""} = {euro(r.risparmio)}
+                  </p>
                 </div>
               </div>
             );
