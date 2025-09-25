@@ -742,17 +742,17 @@ const CompilerDojo = () => {
                     ) : (
                       <div className="mt-2 h-32 bg-gray-100 flex items-center justify-center rounded">
                         <p className="text-xs text-gray-600 text-center italic">
-                          Anteprima non disponibile
+                          Anteprima non disponibile 
                         </p>
                       </div>
                     )}
-                  </div>
+                  </div> 
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Sezione 2 - Documenti Identità e Codice Fiscale */}
+          {/* Sezione 2 -2 Documenti Identità e Codice Fiscale */}
           <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm">
             <div className="space-y-4">
               <h3 className="text-lg sm:text-xl font-semibold text-green-900 flex items-center gap-2">
