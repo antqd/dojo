@@ -115,7 +115,7 @@ const CompilerDojo = () => {
     filePreviews.filter((preview) => preview.section === sectionName);
 
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/modello1.pdf").then((res) =>
+    const existingPdfBytes = await fetch("/modellodojonuovo.pdf").then((res) =>
       res.arrayBuffer()
     );
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -156,8 +156,8 @@ const CompilerDojo = () => {
     drawText(formData.offbusiness, 570, 813, 19);
     drawText(formData.marchio, 220, 1135, 20);
     page.drawText(formData.info || "", {
-      x: 107,
-      y: 380,
+      x: 167,
+      y: 360,
       size: 18,
       font,
       color: rgb(0, 0, 0),
@@ -181,7 +181,7 @@ const CompilerDojo = () => {
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      page.drawImage(png, { x: 85, y: 105, width: 150, height: 50 });
+      page.drawImage(png, { x: 485, y: 105, width: 150, height: 50 });
     }
     const firma2 = sigCanvasRef2.current
       ?.getTrimmedCanvas()
@@ -189,7 +189,7 @@ const CompilerDojo = () => {
     if (firma2) {
       const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
       const png2 = await pdfDoc.embedPng(bytes2);
-      page.drawImage(png2, { x: 485, y: 105, width: 150, height: 50 });
+      page.drawImage(png2, { x: 85, y: 105, width: 150, height: 50 });
     }
 
     const pdfBytes = await pdfDoc.save();
