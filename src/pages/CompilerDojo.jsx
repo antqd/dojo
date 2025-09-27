@@ -2,6 +2,8 @@
 // - aggiunti campi: canone, canonedojo, transatoCredito, transatoDebito, scontrinoMedio, scontrinoMassimo
 // - rimossi input non usati da drawText: iva, posname
 // - aggiunti drawText per i nuovi campi (coordinate stimate, vedi commenti TODO se serve fino)
+// - AGGIUNTO riepilogo testuale del processo di comparazione sotto "Transato mese debito"
+
 import React, { useState, useRef } from "react";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
@@ -68,6 +70,8 @@ const CompilerDojo = () => {
       costoDojoTot,
       risparmio,
       rispPerc,
+      attualeVal,
+      dojoVal,
     };
   }
   // ======= /Simulatore Risparmio =======
@@ -196,6 +200,42 @@ const CompilerDojo = () => {
       });
     };
 
+    // Helper: testo multiline con wrapping basato sulla larghezza reale del font
+    const drawMultilineText = (
+      text,
+      x,
+      y,
+      { size = 12, maxWidth = 560, lineHeight = 16 } = {}
+    ) => {
+      const content = String(text || "");
+      if (!content) return y;
+      const words = content.split(/\s+/);
+      let line = "";
+      let cursorY = y;
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line ? `${line} ${words[i]}` : words[i];
+        const testWidth = font.widthOfTextAtSize(testLine, size);
+        if (testWidth <= maxWidth) {
+          line = testLine;
+        } else {
+          page.drawText(line, {
+            x,
+            y: cursorY,
+            size,
+            font,
+            color: rgb(0, 0, 0),
+          });
+          cursorY -= lineHeight;
+          line = words[i];
+        }
+      }
+      if (line) {
+        page.drawText(line, { x, y: cursorY, size, font, color: rgb(0, 0, 0) });
+        cursorY -= lineHeight;
+      }
+      return cursorY;
+    };
+
     // già presenti
     drawText(formData.partnermanager, 555, 1045, 21);
     drawText(formData.ragione, 230, 1202, 20);
@@ -211,7 +251,6 @@ const CompilerDojo = () => {
       maxWidth: 300,
       lineHeight: 18,
     });
-    // drawText(formData.indirizzo, 350, 1170, 16);
     drawText(formData.debito, 200, 855, 19);
     drawText(formData.offdebito, 570, 855, 19);
     drawText(formData.credito, 200, 895, 19);
@@ -231,14 +270,58 @@ const CompilerDojo = () => {
 
     // NUOVI CAMPI (coordinate stimate in base al layout dell'immagine)
     // Canone mensile (colonna sinistra) e Canone mensile Dojo (colonna destra)
-    drawText(formData.canone, 200, 765, 18); // TODO: se serve micro-ajust
-    drawText(formData.canonedojo, 510, 765, 18); // TODO: regola x/y se necessario
+    drawText(formData.canone, 200, 765, 18); // TODO: micro-adjust se serve
+    drawText(formData.canonedojo, 510, 765, 18);
 
     // Transato mese credito/debito (sinistra) — Scontrino medio/massimo (destra)
     drawText(formData.transatoCredito, 250, 710, 18);
     drawText(formData.transatoDebito, 250, 675, 18);
     drawText(formData.scontrinoMedio, 570, 710, 18);
     drawText(formData.scontrinoMassimo, 585, 675, 18);
+
+    // === RIEPILOGO TESTUALE DEL PROCESSO DI COMPARAZIONE (SOTTO "TRANSATO MESE DEBITO") ===
+    const r = computeSimulation();
+    const modeLabel =
+      sim.mode === "percentuale"
+        ? "percentuale"
+        : "importo fisso per transazione";
+    const unitAtt =
+      sim.mode === "percentuale"
+        ? `${r.attualeVal}%`
+        : `${euro(r.attualeVal)}/tx`;
+    const unitDojo =
+      sim.mode === "percentuale" ? `${r.dojoVal}%` : `${euro(r.dojoVal)}/tx`;
+
+    const riepilogo = [
+      "Confronto costi – riepilogo",
+      `Modalità: ${modeLabel}.`,
+      `Transato mensile considerato: ${euro(r.transato)}.`,
+      r.scontrino > 0
+        ? `Scontrino medio: ${euro(
+            r.scontrino
+          )} → N. transazioni stimato: ${r.nTx.toFixed(1)}.`
+        : "Scontrino medio non inserito: il numero transazioni non è stato stimato.",
+      `Tariffa attuale: ${unitAtt} → Costo variabile: ${euro(r.costoAttuale)}.`,
+      `Tariffa Dojo: ${unitDojo} → Costo variabile: ${euro(r.costoDojo)}.`,
+      sim.includiCanone
+        ? `Canoni mensili inclusi: attuale ${euro(r.canoneAtt)} | Dojo ${euro(
+            r.canoneDojo
+          )}.`
+        : "Canoni mensili non inclusi nel calcolo.",
+      `Totale attuale: ${euro(r.costoAttTot)} | Totale Dojo: ${euro(
+        r.costoDojoTot
+      )}.`,
+      `Risparmio stimato: ${euro(r.risparmio)} (${r.rispPerc.toFixed(1)}%).`,
+    ].join(" ");
+
+    // punto di ancoraggio: sotto transatoDebito (x=250,y=675) → scendo a y≈640
+    drawText("— Riepilogo comparazione —", 160, 660, 12);
+    drawMultilineText(riepilogo, 160, 640, {
+      size: 12,
+      maxWidth: 560,
+      lineHeight: 16,
+    });
+    // === fine riepilogo ===
 
     // firme
     const firma1 = getFirmaImage();
@@ -378,8 +461,6 @@ const CompilerDojo = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
           />
         </div>
-
-        {/* === /Simulatore Risparmio === */}
 
         {/* Condizioni attuali vs Dojo */}
         <div className="space-y-4">
@@ -694,8 +775,7 @@ const CompilerDojo = () => {
           />
         </div>
 
-        {/* Upload documenti (come avevi) */}
-        {/* ... (resto identico al tuo codice per upload/preview/riepilogo) ... */}
+        {/* Upload documenti */}
         <div className="space-y-6">
           <h2 className="text-xl sm:text-2xl font-bold text-blue-900 text-center">
             Caricamento Documenti
@@ -742,17 +822,17 @@ const CompilerDojo = () => {
                     ) : (
                       <div className="mt-2 h-32 bg-gray-100 flex items-center justify-center rounded">
                         <p className="text-xs text-gray-600 text-center italic">
-                          Anteprima non disponibile 
+                          Anteprima non disponibile
                         </p>
                       </div>
                     )}
-                  </div> 
+                  </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Sezione 2 -2 Documenti Identità e Codice Fiscale */}
+          {/* Sezione 2 - Documenti Identità e Codice Fiscale */}
           <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm">
             <div className="space-y-4">
               <h3 className="text-lg sm:text-xl font-semibold text-green-900 flex items-center gap-2">
@@ -882,8 +962,6 @@ const CompilerDojo = () => {
           )}
         </div>
 
-        {/* Firme / Azioni / Anteprima — identici al tuo file, non ripetuti per brevità */}
-        {/* Sostituisci i blocchi sottostanti con gli stessi che hai già nel file originale */}
         {/* Firme */}
         <div className="bg-gray-50 p-4 rounded-lg space-y-6">
           {/* Firma richiedente */}
