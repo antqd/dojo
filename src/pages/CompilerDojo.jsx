@@ -1,8 +1,7 @@
-// PATCH principali:
-// - aggiunti campi: canone, canonedojo, transatoCredito, transatoDebito, scontrinoMedio, scontrinoMassimo
-// - rimossi input non usati da drawText: iva, posname
-// - aggiunti drawText per i nuovi campi (coordinate stimate, vedi commenti TODO se serve fino)
-// - AGGIUNTO riepilogo testuale del processo di comparazione sotto "Transato mese debito"
+// CompilerDojo.jsx
+// - Riepilogo comparazione nel PDF: titolo bold, righe separate, valori in grassetto
+// - Fix WinAnsi per pdf-lib StandardFonts
+// - UI web realtime invariata (simulatore + form + upload + anteprima)
 
 import React, { useState, useRef } from "react";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
@@ -10,19 +9,33 @@ import { saveAs } from "file-saver";
 import SignatureCanvas from "react-signature-canvas";
 
 const CompilerDojo = () => {
-  // ======= Simulatore Risparmio =======
+  // ======= Util =======
   const euro = (v) => {
     const n = Number(v || 0);
     return n.toLocaleString("it-IT", { style: "currency", currency: "EUR" });
   };
 
+  // Sanifica caratteri non supportati da Helvetica (WinAnsi)
+  const sanitizeForWinAnsi = (input) => {
+    let s = String(input ?? "");
+    return s
+      .replace(/\u2013|\u2014|\u2212/g, "-") // – — −
+      .replace(/\u2192|\u27A1/g, "->") // → ➡
+      .replace(/\u2022|\u25CF/g, "*") // • ●
+      .replace(/\u00A0/g, " ")
+      .replace(/\u2018|\u2019/g, "'")
+      .replace(/\u201C|\u201D/g, '"')
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, ""); // emoji
+  };
+
+  // ======= Stato simulatore (realtime UI) =======
   const [sim, setSim] = useState({
     transato: "", // € al mese
-    scontrino: "", // € per stimare # transazioni (obbligatorio solo in modalità costo fisso)
+    scontrino: "",
     mode: "percentuale", // "percentuale" | "fissa"
-    attualeValore: "1.95", // % oppure € per transazione
-    dojoValore: "0.80", // % oppure € per transazione
-    includiCanone: true, // somma canone attuale e canone dojo (se compilati sopra)
+    attualeValore: "1.95",
+    dojoValore: "0.80",
+    includiCanone: true,
   });
 
   const handleSimChange = (e) => {
@@ -41,7 +54,6 @@ const CompilerDojo = () => {
 
     const costoAttuale =
       sim.mode === "fissa" ? nTx * attualeVal : transato * (attualeVal / 100);
-
     const costoDojo =
       sim.mode === "fissa" ? nTx * dojoVal : transato * (dojoVal / 100);
 
@@ -74,8 +86,8 @@ const CompilerDojo = () => {
       dojoVal,
     };
   }
-  // ======= /Simulatore Risparmio =======
 
+  // ======= Stato form e allegati =======
   const [formData, setFormData] = useState({
     partnermanager: "",
     email: "",
@@ -182,72 +194,184 @@ const CompilerDojo = () => {
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
+  // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
     const existingPdfBytes = await fetch("/modellodojonuovo.pdf").then((res) =>
       res.arrayBuffer()
     );
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+    // Font standard
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
     const page = pdfDoc.getPages()[0];
 
-    const drawText = (text, x, y, size = 12) => {
-      page.drawText(String(text || ""), {
+    const drawText = (text, x, y, size = 12, whichFont = font) => {
+      page.drawText(sanitizeForWinAnsi(text), {
+        x,
+        y,
+        size,
+        font: whichFont,
+        color: rgb(0, 0, 0),
+      });
+    };
+
+    // Testo multi-linea con wrapping e \n
+    const drawMultilineText = (
+      text,
+      x,
+      y,
+      { size = 12, maxWidth = 560, lineHeight = 16, whichFont = font } = {}
+    ) => {
+      const blocks = String(text ?? "").split(/\n/);
+      let cursorY = y;
+      for (const block of blocks) {
+        const content = sanitizeForWinAnsi(block);
+        if (!content) {
+          cursorY -= lineHeight;
+          continue;
+        }
+        const words = content.split(/\s+/);
+        let line = "";
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line ? `${line} ${words[i]}` : words[i];
+          const testWidth = whichFont.widthOfTextAtSize(testLine, size);
+          if (testWidth <= maxWidth) {
+            line = testLine;
+          } else {
+            page.drawText(line, {
+              x,
+              y: cursorY,
+              size,
+              font: whichFont,
+              color: rgb(0, 0, 0),
+            });
+            cursorY -= lineHeight;
+            line = words[i];
+          }
+        }
+        if (line) {
+          page.drawText(line, {
+            x,
+            y: cursorY,
+            size,
+            font: whichFont,
+            color: rgb(0, 0, 0),
+          });
+          cursorY -= lineHeight;
+        }
+      }
+      return cursorY;
+    };
+
+    // Disegna una singola riga "Etichetta: Valore", con valore in grassetto.
+    // Gestisce il wrapping della parte Valore se supera il maxWidth.
+    const drawLineLabelValue = (
+      label,
+      value,
+      x,
+      y,
+      { size = 16, maxWidth = 560, lineHeight = 22 } = {}
+    ) => {
+      const safeLabel = sanitizeForWinAnsi(label);
+      const safeValue = sanitizeForWinAnsi(value);
+
+      // Disegna l'etichetta (regular)
+      page.drawText(safeLabel + ": ", {
         x,
         y,
         size,
         font,
         color: rgb(0, 0, 0),
       });
-    };
 
-    // Helper: testo multiline con wrapping basato sulla larghezza reale del font
-    const drawMultilineText = (
-      text,
-      x,
-      y,
-      { size = 12, maxWidth = 560, lineHeight = 16 } = {}
-    ) => {
-      const content = String(text || "");
-      if (!content) return y;
-      const words = content.split(/\s+/);
+      // Calcola x di partenza del valore
+      const labelWidth = font.widthOfTextAtSize(safeLabel + ": ", size);
+      const valueStartX = x + labelWidth;
+
+      // Se il valore supera maxWidth, wrappiamo il valore su nuove righe
+      const availableWidth = Math.max(20, maxWidth - labelWidth);
+      const words = safeValue.split(/\s+/);
       let line = "";
       let cursorY = y;
+
       for (let i = 0; i < words.length; i++) {
         const testLine = line ? `${line} ${words[i]}` : words[i];
-        const testWidth = font.widthOfTextAtSize(testLine, size);
-        if (testWidth <= maxWidth) {
+        const testWidth = fontBold.widthOfTextAtSize(testLine, size);
+        if (testWidth <= availableWidth) {
           line = testLine;
         } else {
+          // Disegna la parte accumulata
           page.drawText(line, {
-            x,
+            x: valueStartX,
             y: cursorY,
             size,
-            font,
+            font: fontBold,
             color: rgb(0, 0, 0),
           });
+          // nuova riga: label non più ripetuta, si parte da x originale
           cursorY -= lineHeight;
           line = words[i];
+          // per la riga successiva, tutto il valore occupa la larghezza maxWidth
+          // quindi se c'è ulteriore wrapping, ripartiamo da x base (non valueStartX)
+          while (true) {
+            const nextWidth = fontBold.widthOfTextAtSize(line, size);
+            if (nextWidth <= maxWidth) break;
+          }
+          // da qui in poi useremo x base per eventuali altre righe
+          const rest = words.slice(i + 1).join(" ");
+          if (rest) {
+            // delega il wrapping delle righe successive all'helper multiline
+            drawMultilineText(line + " " + rest, x, cursorY, {
+              size,
+              maxWidth,
+              lineHeight,
+              whichFont: fontBold,
+            });
+            return (
+              cursorY -
+              lineHeight *
+                Math.ceil(fontBold.widthOfTextAtSize(line, size) / maxWidth)
+            );
+          }
         }
       }
-      if (line) {
-        page.drawText(line, { x, y: cursorY, size, font, color: rgb(0, 0, 0) });
-        cursorY -= lineHeight;
+
+      // Disegna l'ultima riga (o l'unica)
+      page.drawText(line, {
+        x: valueStartX,
+        y: cursorY,
+        size,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      return cursorY - lineHeight;
+    };
+
+    const drawLinesLabelValue = (
+      items, // [{label, value}]
+      x,
+      y,
+      opts = {}
+    ) => {
+      let cursorY = y;
+      for (const it of items) {
+        cursorY = drawLineLabelValue(it.label, it.value, x, cursorY, opts);
       }
       return cursorY;
     };
 
-    // già presenti
+    // ========= COMPILAZIONE PDF =========
+    // campi esistenti
     drawText(formData.partnermanager, 555, 1045, 21);
     drawText(formData.ragione, 230, 1202, 20);
     drawText(formData.cell, 160, 1095, 20);
     drawText(formData.email, 500, 1095, 20);
     drawText(formData.iban, 120, 1045, 17);
-    page.drawText(formData.indirizzo || "", {
-      x: 350,
-      y: 1170,
+    drawMultilineText(formData.indirizzo || "", 350, 1170, {
       size: 15,
-      font,
-      color: rgb(0, 0, 0),
       maxWidth: 300,
       lineHeight: 18,
     });
@@ -258,33 +382,22 @@ const CompilerDojo = () => {
     drawText(formData.business, 200, 813, 19);
     drawText(formData.offbusiness, 570, 813, 19);
     drawText(formData.marchio, 220, 1135, 20);
-    page.drawText(formData.info || "", {
-      x: 167,
-      y: 360,
+    drawMultilineText(formData.info || "", 167, 360, {
       size: 18,
-      font,
-      color: rgb(0, 0, 0),
       maxWidth: 590,
       lineHeight: 18,
     });
 
-    // NUOVI CAMPI (coordinate stimate in base al layout dell'immagine)
-    // Canone mensile (colonna sinistra) e Canone mensile Dojo (colonna destra)
-    drawText(formData.canone, 200, 765, 18); // TODO: micro-adjust se serve
+    // nuovi campi
+    drawText(formData.canone, 200, 765, 18);
     drawText(formData.canonedojo, 510, 765, 18);
-
-    // Transato mese credito/debito (sinistra) — Scontrino medio/massimo (destra)
     drawText(formData.transatoCredito, 250, 710, 18);
     drawText(formData.transatoDebito, 250, 675, 18);
     drawText(formData.scontrinoMedio, 570, 710, 18);
     drawText(formData.scontrinoMassimo, 585, 675, 18);
 
-    // === RIEPILOGO TESTUALE DEL PROCESSO DI COMPARAZIONE (SOTTO "TRANSATO MESE DEBITO") ===
+    // === RIEPILOGO TESTUALE (una riga per voce, valori in bold) ===
     const r = computeSimulation();
-    const modeLabel =
-      sim.mode === "percentuale"
-        ? "percentuale"
-        : "importo fisso per transazione";
     const unitAtt =
       sim.mode === "percentuale"
         ? `${r.attualeVal}%`
@@ -292,38 +405,29 @@ const CompilerDojo = () => {
     const unitDojo =
       sim.mode === "percentuale" ? `${r.dojoVal}%` : `${euro(r.dojoVal)}/tx`;
 
-    const riepilogo = [
-      "Confronto costi – riepilogo",
-      `Modalità: ${modeLabel}.`,
-      `Transato mensile considerato: ${euro(r.transato)}.`,
-      r.scontrino > 0
-        ? `Scontrino medio: ${euro(
-            r.scontrino
-          )} → N. transazioni stimato: ${r.nTx.toFixed(1)}.`
-        : "Scontrino medio non inserito: il numero transazioni non è stato stimato.",
-      `Tariffa attuale: ${unitAtt} → Costo variabile: ${euro(r.costoAttuale)}.`,
-      `Tariffa Dojo: ${unitDojo} → Costo variabile: ${euro(r.costoDojo)}.`,
-      sim.includiCanone
-        ? `Canoni mensili inclusi: attuale ${euro(r.canoneAtt)} | Dojo ${euro(
-            r.canoneDojo
-          )}.`
-        : "Canoni mensili non inclusi nel calcolo.",
-      `Totale attuale: ${euro(r.costoAttTot)} | Totale Dojo: ${euro(
-        r.costoDojoTot
-      )}.`,
-      `Risparmio stimato: ${euro(r.risparmio)} (${r.rispPerc.toFixed(1)}%).`,
-    ].join(" ");
+    // Titolo spostato 40px a sx e 20px giù rispetto alla tua versione originale
+    drawText("Riepilogo comparazione", 75, 620, 18, fontBold);
 
-    // punto di ancoraggio: sotto transatoDebito (x=250,y=675) → scendo a y≈640
-    drawText("— Riepilogo comparazione —", 160, 660, 12);
-    drawMultilineText(riepilogo, 160, 640, {
-      size: 12,
+    const items = [
+      { label: "Transato", value: euro(r.transato) },
+      { label: "Tariffa attuale", value: unitAtt },
+      { label: "Tariffa Dojo", value: unitDojo },
+      { label: "Totale attuale", value: euro(r.costoAttTot) },
+      { label: "Totale Dojo", value: euro(r.costoDojoTot) },
+      {
+        label: "Risparmio",
+        value: `${euro(r.risparmio)} (${r.rispPerc.toFixed(1)}%)`,
+      },
+    ];
+
+    drawLinesLabelValue(items, 75, 600, {
+      size: 16,
+      lineHeight: 22,
       maxWidth: 560,
-      lineHeight: 16,
     });
     // === fine riepilogo ===
 
-    // firme
+    // Firme
     const firma1 = getFirmaImage();
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
@@ -339,6 +443,7 @@ const CompilerDojo = () => {
       page.drawImage(png2, { x: 85, y: 105, width: 150, height: 50 });
     }
 
+    // Salva e mostra anteprima
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
@@ -347,6 +452,7 @@ const CompilerDojo = () => {
 
   const scaricaPdf = () => pdfUrl && saveAs(pdfUrl, "modulo_compilato.pdf");
 
+  // ======= Invio backoffice =======
   const getFileSize = (f) => f?.size ?? 0;
   const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 
@@ -380,7 +486,7 @@ const CompilerDojo = () => {
         email: formData.email?.trim() || "noreply@local",
         telefono: formData.cell?.trim() || "",
         messaggio: formData.info || "",
-        attachments, // backend /api/sendToClient si aspetta questo nome
+        attachments, // /api/sendToClient si aspetta questo nome
       };
 
       const res = await fetch(API_CLIENTE, {
@@ -402,6 +508,7 @@ const CompilerDojo = () => {
     }
   }
 
+  // ======= UI =======
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:py-8 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-4 sm:p-6 lg:p-8 space-y-6">
@@ -409,7 +516,7 @@ const CompilerDojo = () => {
           Compilazione modulo PDF
         </h2>
 
-        {/* Dati principali (come nel modello) */}
+        {/* Dati principali */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <input
             name="ragione"
@@ -524,7 +631,7 @@ const CompilerDojo = () => {
             </div>
           </div>
 
-          {/* Riga: Canone mensile / Canone mensile Dojo */}
+          {/* Canoni */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <input
               name="canone"
@@ -542,7 +649,7 @@ const CompilerDojo = () => {
             />
           </div>
 
-          {/* Righe: Transato / Scontrino */}
+          {/* Transati/Scontrini */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <input
               name="transatoCredito"
@@ -575,7 +682,7 @@ const CompilerDojo = () => {
           </div>
         </div>
 
-        {/* === Simulatore Risparmio === */}
+        {/* === Simulatore Risparmio (realtime sulla pagina) === */}
         <div className="space-y-4 border border-blue-200 rounded-lg p-4 sm:p-6">
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
             Simulatore risparmio
@@ -659,13 +766,12 @@ const CompilerDojo = () => {
                   checked={sim.includiCanone}
                   onChange={handleSimChange}
                 />
-                Includi canoni mensili (usa "Canone mensile" e "Canone mensile
-                Dojo" sopra)
+                Includi canoni mensili
               </label>
             </div>
           </div>
 
-          {/* Risultati */}
+          {/* Pannello risultati in tempo reale */}
           {(() => {
             const r = computeSimulation();
             return (
@@ -697,65 +803,6 @@ const CompilerDojo = () => {
                     </p>
                   </div>
                 </div>
-
-                {/* Spiegazione calcoli */}
-                <div className="mt-3 text-sm text-gray-800 space-y-1">
-                  <p className="font-medium">Come è stato calcolato:</p>
-                  {sim.mode === "percentuale" ? (
-                    <>
-                      <p>
-                        • Numero transazioni stimato ={" "}
-                        {r.scontrino > 0 ? r.nTx.toFixed(1) : "n/d"}{" "}
-                        {r.scontrino > 0
-                          ? `(transato ${euro(
-                              r.transato
-                            )} / scontrino medio ${euro(r.scontrino)})`
-                          : "(non necessario)"}
-                      </p>
-                      <p>
-                        • Costo ATTUALE = transato ×{" "}
-                        {Number(sim.attualeValore || 0)}% ={" "}
-                        {euro(r.costoAttuale)}
-                      </p>
-                      <p>
-                        • Costo DOJO = transato × {Number(sim.dojoValore || 0)}%
-                        = {euro(r.costoDojo)}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p>
-                        • Numero transazioni stimato = transato / scontrino ={" "}
-                        {r.scontrino > 0
-                          ? `${euro(r.transato)} / ${euro(
-                              r.scontrino
-                            )} = ${r.nTx.toFixed(1)}`
-                          : "— (inserisci lo scontrino medio)"}
-                      </p>
-                      <p>
-                        • Costo ATTUALE = n.transazioni ×{" "}
-                        {euro(Number(sim.attualeValore || 0))} ={" "}
-                        {euro(r.costoAttuale)}
-                      </p>
-                      <p>
-                        • Costo DOJO = n.transazioni ×{" "}
-                        {euro(Number(sim.dojoValore || 0))} ={" "}
-                        {euro(r.costoDojo)}
-                      </p>
-                    </>
-                  )}
-                  {sim.includiCanone && (
-                    <>
-                      <p>• + Canone ATTUALE: {euro(r.canoneAtt)}</p>
-                      <p>• + Canone DOJO: {euro(r.canoneDojo)}</p>
-                    </>
-                  )}
-                  <p className="font-medium">
-                    • Risparmio = Costo ATTUALE
-                    {sim.includiCanone ? " + canone" : ""} − Costo DOJO
-                    {sim.includiCanone ? " + canone" : ""} = {euro(r.risparmio)}
-                  </p>
-                </div>
               </div>
             );
           })()}
@@ -781,7 +828,7 @@ const CompilerDojo = () => {
             Caricamento Documenti
           </h2>
 
-          {/* Sezione 1 - Visura Camerale */}
+          {/* Visura Camerale */}
           <div className="bg-white border border-blue-200 rounded-lg p-6 shadow-sm">
             <div className="space-y-4">
               <h3 className="text-lg sm:text-xl font-semibold text-blue-900 flex items-center gap-2">
@@ -832,7 +879,7 @@ const CompilerDojo = () => {
             </div>
           </div>
 
-          {/* Sezione 2 - Documenti Identità e Codice Fiscale */}
+          {/* Identità + CF */}
           <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm">
             <div className="space-y-4">
               <h3 className="text-lg sm:text-xl font-semibold text-green-900 flex items-center gap-2">
@@ -883,7 +930,7 @@ const CompilerDojo = () => {
             </div>
           </div>
 
-          {/* Sezione 3 - Documento IBAN */}
+          {/* Documento IBAN */}
           <div className="bg-white border border-purple-200 rounded-lg p-6 shadow-sm">
             <div className="space-y-4">
               <h3 className="text-lg sm:text-xl font-semibold text-purple-900 flex items-center gap-2">
@@ -934,7 +981,7 @@ const CompilerDojo = () => {
             </div>
           </div>
 
-          {/* Riepilogo tutti i file */}
+          {/* Riepilogo file */}
           {files.length > 0 && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -978,7 +1025,7 @@ const CompilerDojo = () => {
                     : "bg-green-500 text-white"
                 }`}
               >
-                {isSignature1Active ? "🔓 Disattiva Firma" : "🔒 Attiva Firma"}
+                {isSignature1Active ? "Disattiva Firma" : "Attiva Firma"}
               </button>
             </div>
             {isSignature1Active ? (
@@ -1025,7 +1072,7 @@ const CompilerDojo = () => {
                     : "bg-green-500 text-white"
                 }`}
               >
-                {isSignature2Active ? "🔓 Disattiva Firma" : "🔒 Attiva Firma"}
+                {isSignature2Active ? "Disattiva Firma" : "Attiva Firma"}
               </button>
             </div>
             {isSignature2Active ? (
