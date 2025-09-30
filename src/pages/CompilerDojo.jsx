@@ -363,7 +363,7 @@ const CompilerDojo = () => {
       return cursorY;
     };
 
-    // Disegna coppie Label: Valore in orizzontale con sfondi verdi per dare evidenza
+    // Disegna coppie Label: Valore in orizzontale, evidenziando SOLO il valore di Risparmio
     const drawInlineLabelValuePairs = (
       items, // [{label, value}]
       x,
@@ -374,11 +374,11 @@ const CompilerDojo = () => {
         maxWidth = 560,
         gap = 24,
         // Stili (0..1)
-        labelBg = { r: 0.86, g: 0.97, b: 0.86 }, // verde chiaro
-        valueBg = { r: 0.78, g: 0.93, b: 0.78 }, // verde medio
+        labelBg = { r: 0.86, g: 0.97, b: 0.86 }, // unused
+        valueBg = { r: 0.78, g: 0.93, b: 0.78 }, // unused
         risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 }, // accento per Risparmio
-        labelColor = { r: 0.05, g: 0.25, b: 0.05 }, // testo etichetta
-        valueColor = { r: 0.00, g: 0.40, b: 0.00 }, // testo valore
+        labelColor = { r: 0.05, g: 0.25, b: 0.05 }, // unused
+        valueColor = { r: 0.00, g: 0.40, b: 0.00 }, // unused
         paddingX = 4,
         paddingY = 2,
         boxOpacity = 0.9,
@@ -403,45 +403,52 @@ const CompilerDojo = () => {
           currY -= lineHeight;
         }
 
-        // Background etichetta
-        page.drawRectangle({
-          x: currX - paddingX,
-          y: currY - paddingY,
-          width: labelW + paddingX * 2,
-          height: size + paddingY * 2,
-          color: rgb(labelBg.r, labelBg.g, labelBg.b),
-          opacity: boxOpacity,
-        });
-        // Testo etichetta
+        const isRisparmio = safeLabel.trim().toLowerCase().startsWith("risparmio:");
+
+        // 1) Disegna SEMPRE la label senza background (nero)
         page.drawText(safeLabel, {
           x: currX,
           y: currY,
           size,
           font,
-          color: rgb(labelColor.r, labelColor.g, labelColor.b),
+          color: rgb(0, 0, 0),
         });
 
+        // 2) Calcola x di partenza del valore
         const valueX = currX + labelW;
-        const isRisparmio = safeLabel.trim().toLowerCase().startsWith("risparmio:");
-        const vb = isRisparmio ? risparmioValueBg : valueBg;
 
-        // Background valore
-        page.drawRectangle({
-          x: valueX - paddingX,
-          y: currY - paddingY,
-          width: valueW + paddingX * 2,
-          height: size + paddingY * 2,
-          color: rgb(vb.r, vb.g, vb.b),
-          opacity: boxOpacity,
-        });
-        // Testo valore (bold)
-        page.drawText(safeValue, {
-          x: valueX,
-          y: currY,
-          size,
-          font: fontBold,
-          color: rgb(valueColor.r, valueColor.g, valueColor.b),
-        });
+        if (isRisparmio) {
+          // Solo per RISPARMIO: evidenzia SOLO il valore con bg verde e testo verde bold
+          const vb = risparmioValueBg; // colore bg già definito negli argomenti
+          const paddingX = 4;
+          const paddingY = 2;
+
+          page.drawRectangle({
+            x: valueX - paddingX,
+            y: currY - paddingY,
+            width: valueW + paddingX * 2,
+            height: size + paddingY * 2,
+            color: rgb(vb.r, vb.g, vb.b),
+            opacity: boxOpacity,
+          });
+
+          page.drawText(safeValue, {
+            x: valueX,
+            y: currY,
+            size,
+            font: fontBold,
+            color: rgb(0.00, 0.40, 0.00), // verde per il valore di Risparmio
+          });
+        } else {
+          // Per tutte le altre voci: niente background, testo nero (label regular, valore bold)
+          page.drawText(safeValue, {
+            x: valueX,
+            y: currY,
+            size,
+            font: fontBold,
+            color: rgb(0, 0, 0),
+          });
+        }
 
         // Avanza il cursore in orizzontale
         currX += labelW + valueW + gap;
