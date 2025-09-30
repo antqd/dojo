@@ -196,7 +196,7 @@ const CompilerDojo = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/modellodojonuovo.pdf").then((res) =>
+    const existingPdfBytes = await fetch("/modellodojo.pdf").then((res) =>
       res.arrayBuffer()
     );
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -363,6 +363,93 @@ const CompilerDojo = () => {
       return cursorY;
     };
 
+    // Disegna coppie Label: Valore in orizzontale con sfondi verdi per dare evidenza
+    const drawInlineLabelValuePairs = (
+      items, // [{label, value}]
+      x,
+      y,
+      {
+        size = 16,
+        lineHeight = 22,
+        maxWidth = 560,
+        gap = 24,
+        // Stili (0..1)
+        labelBg = { r: 0.86, g: 0.97, b: 0.86 }, // verde chiaro
+        valueBg = { r: 0.78, g: 0.93, b: 0.78 }, // verde medio
+        risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 }, // accento per Risparmio
+        labelColor = { r: 0.05, g: 0.25, b: 0.05 }, // testo etichetta
+        valueColor = { r: 0.00, g: 0.40, b: 0.00 }, // testo valore
+        paddingX = 4,
+        paddingY = 2,
+        boxOpacity = 0.9,
+      } = {}
+    ) => {
+      let currX = x;
+      let currY = y;
+      const rowMaxX = x + maxWidth;
+
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const safeLabel = sanitizeForWinAnsi(String(it.label || "")) + ": ";
+        const safeValue = sanitizeForWinAnsi(String(it.value || ""));
+
+        const labelW = font.widthOfTextAtSize(safeLabel, size);
+        const valueW = fontBold.widthOfTextAtSize(safeValue, size);
+        const pairW = labelW + valueW + (i < items.length - 1 ? gap : 0);
+
+        // Se non ci stiamo in riga, vai a capo
+        if (currX + pairW > rowMaxX) {
+          currX = x;
+          currY -= lineHeight;
+        }
+
+        // Background etichetta
+        page.drawRectangle({
+          x: currX - paddingX,
+          y: currY - paddingY,
+          width: labelW + paddingX * 2,
+          height: size + paddingY * 2,
+          color: rgb(labelBg.r, labelBg.g, labelBg.b),
+          opacity: boxOpacity,
+        });
+        // Testo etichetta
+        page.drawText(safeLabel, {
+          x: currX,
+          y: currY,
+          size,
+          font,
+          color: rgb(labelColor.r, labelColor.g, labelColor.b),
+        });
+
+        const valueX = currX + labelW;
+        const isRisparmio = safeLabel.trim().toLowerCase().startsWith("risparmio:");
+        const vb = isRisparmio ? risparmioValueBg : valueBg;
+
+        // Background valore
+        page.drawRectangle({
+          x: valueX - paddingX,
+          y: currY - paddingY,
+          width: valueW + paddingX * 2,
+          height: size + paddingY * 2,
+          color: rgb(vb.r, vb.g, vb.b),
+          opacity: boxOpacity,
+        });
+        // Testo valore (bold)
+        page.drawText(safeValue, {
+          x: valueX,
+          y: currY,
+          size,
+          font: fontBold,
+          color: rgb(valueColor.r, valueColor.g, valueColor.b),
+        });
+
+        // Avanza il cursore in orizzontale
+        currX += labelW + valueW + gap;
+      }
+
+      return currY - lineHeight;
+    };
+
     // ========= COMPILAZIONE PDF =========
     // campi esistenti
     drawText(formData.partnermanager, 555, 1045, 21);
@@ -382,7 +469,7 @@ const CompilerDojo = () => {
     drawText(formData.business, 200, 813, 19);
     drawText(formData.offbusiness, 570, 813, 19);
     drawText(formData.marchio, 220, 1135, 20);
-    drawMultilineText(formData.info || "", 167, 360, {
+    drawMultilineText(formData.info || "", 167, 340, {
       size: 18,
       maxWidth: 590,
       lineHeight: 18,
@@ -406,10 +493,10 @@ const CompilerDojo = () => {
       sim.mode === "percentuale" ? `${r.dojoVal}%` : `${euro(r.dojoVal)}/tx`;
 
     // Titolo spostato 40px a sx e 20px giù rispetto alla tua versione originale
-    drawText("Riepilogo comparazione", 75, 620, 18, fontBold);
+    drawText("Riepilogo comparazione", 75, 530, 18, fontBold);
 
     const items = [
-      { label: "Transato", value: euro(r.transato) },
+      { label: "Transato", value: euro(r.transato)},
       { label: "Tariffa attuale", value: unitAtt },
       { label: "Tariffa Dojo", value: unitDojo },
       { label: "Totale attuale", value: euro(r.costoAttTot) },
@@ -420,10 +507,11 @@ const CompilerDojo = () => {
       },
     ];
 
-    drawLinesLabelValue(items, 75, 600, {
+    drawInlineLabelValuePairs(items, 75, 510, {
       size: 16,
       lineHeight: 22,
-      maxWidth: 560,
+      maxWidth: 590,
+      gap: 24,
     });
     // === fine riepilogo ===
 
