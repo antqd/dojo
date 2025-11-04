@@ -66,9 +66,16 @@ export default function App() {
       {/* NAVBAR */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-black/5">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/images/logo.png" alt="DOJO" className="h-14" />
-            <span className="sr-only">Dojo</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <img src="/images/logo.png" alt="DOJO" className="h-14" />
+              <span className="sr-only">Dojo</span>
+            </div>
+            <p className="text-xs text-[#2B4A42]">
+            Expopay è un marchio di Expo energia, agente Dojo. <br />
+
+              Via de amicis snc , 87036 rende (cs) P. Iva 03689480782
+            </p>
           </div>
 
           {/* +++ aggiunte voci anchor, tutto one-page +++ */}
@@ -586,8 +593,6 @@ export default function App() {
             </div>
           </div>
           <p className="mt-4 opacity-70 max-w-3xl">
-            Expopay è un marchio di Expo energia, agente Dojo. <br />
-            Via de amicis snc , 87036 rende (cs) P. Iva
           </p>
         </div>
       </footer>
