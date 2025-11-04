@@ -72,9 +72,8 @@ export default function App() {
               <span className="sr-only">Dojo</span>
             </div>
             <p className="text-xs text-[#2B4A42]">
-            Expopay è un marchio di Expo energia, agente Dojo. <br />
-
-              Via de amicis snc , 87036 rende (cs) P. Iva 03689480782
+              Expopay è un marchio di Expo energia Srl agente Dojo. <br />
+              Via De Amicis snc , 87036 Rende (CS) P. Iva 03689480782
             </p>
           </div>
 
@@ -592,8 +591,7 @@ export default function App() {
               </a>
             </div>
           </div>
-          <p className="mt-4 opacity-70 max-w-3xl">
-          </p>
+          <p className="mt-4 opacity-70 max-w-3xl"></p>
         </div>
       </footer>
     </div>
