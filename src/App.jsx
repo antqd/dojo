@@ -570,7 +570,7 @@ export default function App() {
       <footer className="py-10 border-t border-black/5 bg-white">
         <div className="mx-auto max-w-6xl px-4 text-sm text-[#2B4A42]">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <img src="/images/logo.png" alt="Dojo" className="h-7" />
+            <img src="/images/logo.png" alt="Dojo" className="h-15" />
             <div className="flex items-center gap-3 opacity-70">
               <span>© {new Date().getFullYear()} Dojo</span>
               <span>•</span>
@@ -586,9 +586,8 @@ export default function App() {
             </div>
           </div>
           <p className="mt-4 opacity-70 max-w-3xl">
-            Paymentsense Ireland Limited opera come Dojo, istituto di moneta
-            elettronica regolato dalla Banca Centrale d’Irlanda. Le integrazioni
-            illustrate sono a scopo dimostrativo.
+            Expopay è un marchio di Expo energia, agente Dojo. <br />
+            Via de amicis snc , 87036 rende (cs) P. Iva
           </p>
         </div>
       </footer>
