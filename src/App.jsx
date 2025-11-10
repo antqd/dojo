@@ -5,7 +5,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { Link } from "react-router-dom";
 
-// icone (gratis) per le card e le sezioni
 import {
   ShieldCheckIcon,
   BanknotesIcon,
@@ -26,7 +25,6 @@ export default function App() {
 
   useGSAP(
     () => {
-      // hero entrance
       gsap.from(".hero-stagger", {
         opacity: 0,
         y: 24,
@@ -35,7 +33,6 @@ export default function App() {
         ease: "power2.out",
       });
 
-      // float effect on device
       if (heroImg.current) {
         gsap.to(heroImg.current, {
           y: -10,
@@ -47,7 +44,6 @@ export default function App() {
         });
       }
 
-      // cards reveal on scroll
       gsap.utils.toArray(".reveal").forEach((el) => {
         gsap.from(el, {
           opacity: 0,
@@ -77,31 +73,18 @@ export default function App() {
             </p>
           </div>
 
-          {/* +++ aggiunte voci anchor, tutto one-page +++ */}
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features" className="hover:opacity-80">
-              Funzioni
+            <a href="#chi-siamo" className="hover:opacity-80">
+              Chi siamo
             </a>
-            <a href="#vantaggi" className="hover:opacity-80">
-              Vantaggi
+            <a href="#servizi" className="hover:opacity-80">
+              I nostri servizi
             </a>
-            <a href="#velocita" className="hover:opacity-80">
-              Velocità
+            <a href="#diventa-partner" className="hover:opacity-80">
+              Diventa Partner
             </a>
-            <a href="#storie" className="hover:opacity-80">
-              Storie
-            </a>
-            <a href="#piu-di-un-pos" className="hover:opacity-80">
-              Più di un POS
-            </a>
-            <a href="#vendite-realtime" className="hover:opacity-80">
-              Vendite
-            </a>
-            <a href="#nps" className="hover:opacity-80">
-              NPS
-            </a>
-            <a href="#contatti" className="hover:opacity-80">
-              Contatti
+            <a href="#diventa-personal-manager" className="hover:opacity-80">
+              Diventa Personal Manager
             </a>
           </div>
 
@@ -115,25 +98,25 @@ export default function App() {
       </header>
 
       {/* HERO */}
-      <section className="relative overflow-hidden">
-        {/* blob decor */}
+      <section className="relative overflow-hidden bg-white">
         <div className="pointer-events-none absolute -top-32 -right-24 h-96 w-96 rounded-full bg-[#1BA97F]/10 blur-3xl" />
         <div className="mx-auto max-w-6xl px-4 grid lg:grid-cols-2 gap-10 items-center py-16">
           <div>
             <p className="hero-stagger text-xs uppercase tracking-[0.2em] text-[#1BA97F] mb-3">
-              Pagamenti smart • POS Cloud
+              Expopay • POS Dojo • Pay Later • Servizi web
             </p>
-            <h1 className="hero-stagger text-4xl sm:text-5xl font-semibold leading-tight text-[#0B2B23]">
-              Unisciti alla <span className="text-[#1BA97F]">rivoluzione</span>
+            <h1 className="hero-stagger text-4xl sm:text-5xl font-semibold leading-tight text-[#0B2B23] font-serif">
+              Pagamenti, rate e web
               <br />
-              dei pagamenti
+              in un unico{" "}
+              <span className="text-[#1BA97F]">partner digitale</span>
             </h1>
             <p className="hero-stagger mt-4 text-base text-[#2B4A42] max-w-xl">
-              Dall’integrazione cloud ai POS di ultima generazione, fino a un
-              servizio clienti premiato: ti diamo gli strumenti per crescere.
+              Non solo POS Dojo: ti aiutiamo a incassare, vendere a rate in 3
+              pagamenti e portare la tua attività online con landing page,
+              webapp ed e-commerce su misura.
             </p>
 
-            {/* badge carte */}
             <div className="hero-stagger mt-6 flex flex-wrap items-center gap-3">
               {[
                 "/images/cards/visa.png",
@@ -147,7 +130,7 @@ export default function App() {
               ))}
             </div>
 
-            <div className="hero-stagger mt-8 flex gap-3">
+            <div className="hero-stagger mt-8 flex gap-3 flex-wrap">
               <Link
                 to="/form-partner-manager"
                 className="rounded-full bg-[#1BA97F] px-5 py-3 text-white font-medium shadow hover:brightness-110"
@@ -155,10 +138,40 @@ export default function App() {
                 Diventa Referral Partner
               </Link>
               <a
-                href="#features"
+                href="#servizi"
                 className="rounded-full px-5 py-3 border border-[#1BA97F] text-[#1BA97F] font-medium hover:bg-[#1BA97F]/5"
               >
-                Scopri di più
+                Scopri i servizi
+              </a>
+            </div>
+
+            <div className="hero-stagger mt-8 grid gap-3 sm:grid-cols-3 text-sm">
+              <a
+                href="#servizi-pos-dojo"
+                className="rounded-2xl bg-[#F6F7F6] border border-black/5 px-4 py-3 shadow-sm hover:shadow transition"
+              >
+                <p className="font-semibold">POS fisico Dojo</p>
+                <p className="text-xs text-[#2B4A42]/80">
+                  Pagamenti rapidi in negozio.
+                </p>
+              </a>
+              <a
+                href="#servizi-pay-later"
+                className="rounded-2xl bg-[#F6F7F6] border border-black/5 px-4 py-3 shadow-sm hover:shadow transition"
+              >
+                <p className="font-semibold">Pay Later in 3 rate</p>
+                <p className="text-xs text-[#2B4A42]/80">
+                  Vendi in 3 pagamenti con Stripe/Klarna.
+                </p>
+              </a>
+              <a
+                href="#servizi-web-digitali"
+                className="rounded-2xl bg-[#F6F7F6] border border-black/5 px-4 py-3 shadow-sm hover:shadow transition"
+              >
+                <p className="font-semibold">Servizi web</p>
+                <p className="text-xs text-[#2B4A42]/80">
+                  Landing, webapp, e-commerce.
+                </p>
               </a>
             </div>
           </div>
@@ -174,7 +187,381 @@ export default function App() {
         </div>
       </section>
 
-      {/* PILLARS */}
+      {/* ============= CHI SIAMO (NUOVO LOOK) ============= */}
+      <section
+        id="chi-siamo"
+        className="bg-gradient-to-b from-white via-[#F3FBF8] to-[#E5F4EE]"
+      >
+        <div className="mx-auto max-w-6xl px-4 py-16 grid md:grid-cols-[1.1fr,0.95fr] gap-10 items-start">
+          <div className="reveal space-y-5">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/60 border border-[#1BA97F]/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#1BA97F]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#1BA97F]" />
+              Expo Energia • Expopay
+            </span>
+
+            <h2 className="text-3xl sm:text-4xl font-semibold font-serif text-[#0B2B23]">
+              Chi siamo
+            </h2>
+
+            <p className="text-sm font-mono text-[#1BA97F] uppercase tracking-[0.2em]">
+              Work in progress
+            </p>
+
+            <p className="text-[#2B4A42] leading-relaxed">
+              Qui racconteremo la storia di Expo Energia, di come è nato il
+              progetto Expopay e della partnership con Dojo per portare
+              pagamenti smart e soluzioni digitali alle attività locali.{" "}
+              <span className="font-medium">
+                Testo in aggiornamento: Work in progress.
+              </span>
+            </p>
+
+            <p className="text-[#2B4A42]/85 text-sm leading-relaxed">
+              Userai questo spazio per spiegare chi siete, i vostri valori, il
+              team, l&apos;esperienza nel settore energia e pagamenti e perché
+              un esercente dovrebbe scegliere voi come partner unico per POS,
+              Pay Later e servizi web.
+            </p>
+          </div>
+
+          <div className="reveal">
+            <div className="rounded-3xl bg-white p-6 shadow-[0_18px_40px_rgba(0,0,0,0.06)] border border-[#D8EAE2] relative overflow-hidden">
+              <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[#1BA97F]/8 blur-2xl" />
+              <div className="border-l-4 border-[#1BA97F] pl-4">
+                <h3 className="text-lg font-semibold text-[#0B2B23]">
+                  Cosa facciamo in una frase
+                </h3>
+                <p className="mt-2 text-sm text-[#2B4A42] leading-relaxed">
+                  Aiutiamo negozi, ristoranti e attività locali a incassare
+                  meglio, vendere di più e digitalizzare il proprio business,
+                  unendo POS fisici, soluzioni di pagamento rateale e progetti
+                  web su misura.
+                </p>
+              </div>
+
+              <div className="mt-5 grid gap-3 text-sm text-[#2B4A42]">
+                <div className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#1BA97F]" />
+                  <p>Consulenza sui pagamenti e soluzioni Dojo.</p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#1BA97F]" />
+                  <p>Integrazione con e-commerce e sistemi gestionali.</p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#1BA97F]" />
+                  <p>Sviluppo siti, landing page e webapp dedicate.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============= I NOSTRI SERVIZI (LOOK DIVERSO) ============= */}
+      <section id="servizi" className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="reveal flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-semibold font-serif">
+                I nostri servizi
+              </h2>
+              <p className="mt-3 text-[#2B4A42] max-w-2xl">
+                Dopo l&apos;attivazione del POS Dojo ti seguiamo con un
+                ecosistema di soluzioni che aumentano lo scontrino medio,
+                semplificano i pagamenti e portano il tuo business online.
+              </p>
+            </div>
+
+            <div className="flex gap-2 text-xs text-[#2B4A42]/80 flex-wrap">
+              <span className="px-3 py-1 rounded-full bg-[#F6F7F6]">
+                POS fisico
+              </span>
+              <span className="px-3 py-1 rounded-full bg-[#F6F7F6]">
+                Pay Later
+              </span>
+              <span className="px-3 py-1 rounded-full bg-[#F6F7F6]">
+                Web & digitale
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-10 grid md:grid-cols-3 gap-6">
+            {/* POS FISICO DOJO */}
+            <div
+              id="servizi-pos-dojo"
+              className="reveal rounded-3xl bg-[#F6F7F6] p-6 shadow-[0_16px_30px_rgba(0,0,0,0.04)] border border-[#E1E7E4]"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white shadow-sm">
+                  <BoltIcon className="h-5 w-5 text-[#1BA97F]" />
+                </span>
+                <h3 className="text-lg font-semibold">POS fisico Dojo</h3>
+              </div>
+              <p className="mt-3 text-sm text-[#2B4A42] leading-relaxed">
+                Terminali POS moderni, veloci e affidabili, con bonifici rapidi
+                e assistenza dedicata. Perfetti per ristoranti, bar, negozi e
+                attività locali che vogliono incassare in modo semplice e
+                trasparente.
+              </p>
+              <ul className="mt-4 text-xs text-[#2B4A42]/85 space-y-1.5">
+                <li>• Transazioni rapide e uptime elevato</li>
+                <li>• Acquisto o noleggio del dispositivo</li>
+                <li>• Supporto italiano e gestione completa tramite app</li>
+              </ul>
+            </div>
+
+            {/* PAY LATER IN 3 RATE */}
+            <div
+              id="servizi-pay-later"
+              className="reveal rounded-3xl bg-[#0F3E34] p-6 shadow-[0_18px_36px_rgba(0,0,0,0.35)] text-white relative overflow-hidden"
+            >
+              <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[#1BA97F]/30 blur-2xl" />
+              <div className="flex items-center gap-3 relative z-10">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 border border-white/20">
+                  <BanknotesIcon className="h-5 w-5" />
+                </span>
+                <h3 className="text-lg font-semibold">Pay Later in 3 rate</h3>
+              </div>
+              <p className="mt-3 text-sm text-white/90 leading-relaxed relative z-10">
+                Offri ai tuoi clienti la possibilità di pagare in 3 comode rate,
+                grazie a soluzioni tipo Tripago, Stripe, Klarna e servizi BNPL
+                collegati. Tu incassi, il cliente dilaziona il pagamento.
+              </p>
+              <ul className="mt-4 text-xs text-white/85 space-y-1.5 relative z-10">
+                <li>• Aumenti lo scontrino medio e le conversioni</li>
+                <li>
+                  • Ideale per prodotti ad alto valore (es. elettronica, arredo)
+                </li>
+                <li>• Integrazione con POS fisico e/o checkout online</li>
+              </ul>
+            </div>
+
+            {/* SERVIZI WEB & DIGITALI */}
+            <div
+              id="servizi-web-digitali"
+              className="reveal rounded-3xl bg-[#FDFBF7] p-6 shadow-[0_16px_30px_rgba(0,0,0,0.04)] border border-[#E8E0CF]"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white shadow-sm">
+                  <DocumentChartBarIcon className="h-5 w-5 text-[#C26A28]" />
+                </span>
+                <h3 className="text-lg font-semibold">Servizi web su misura</h3>
+              </div>
+              <p className="mt-3 text-sm text-[#2B4A42] leading-relaxed">
+                Realizziamo landing page, webapp e e-commerce cuciti sulla tua
+                attività, integrati con sistemi di pagamento moderni e pensati
+                per generare risultati veri.
+              </p>
+              <ul className="mt-4 text-xs text-[#2B4A42]/85 space-y-1.5">
+                <li>• Landing page per campagne e lead generation</li>
+                <li>• Webapp gestionali e servizi custom</li>
+                <li>• E-commerce completi con pagamenti integrati</li>
+                <li>• Qualsiasi progetto web/tech: dal design al deploy</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PAY LATER FOCUS */}
+      <section id="pay-later" className="bg-[#0F3E34] text-white">
+        <div className="mx-auto max-w-6xl px-4 py-14 grid md:grid-cols-2 gap-10 items-center">
+          <div className="reveal space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-semibold font-serif">
+              Pay Later in 3 rate:
+              <br />
+              vendi di più, subito
+            </h2>
+            <p className="text-white/90">
+              Dai ai tuoi clienti la possibilità di acquistare oggi e pagare in
+              3 pagamenti, sfruttando le integrazioni con Stripe, Klarna e
+              servizi simili. Tu incassi, loro dilazionano.
+            </p>
+            <ul className="space-y-2 text-sm text-white/80">
+              <li>• Aumenti lo scontrino medio e la chiusura delle vendite</li>
+              <li>• Ideale per prodotti e servizi ad alto valore</li>
+              <li>• Attivabile online e in negozio</li>
+              <li>• Configurazione e supporto tecnico curati da noi</li>
+            </ul>
+            <p className="text-xs text-white/60">
+              Indicata per elettronica, arredamento, centri estetici, formazione
+              e tutte le attività con ticket medio importante.
+            </p>
+          </div>
+
+          <div className="reveal rounded-2xl bg-white/5 p-6 border border-white/10">
+            <h3 className="text-lg font-semibold">Come funziona</h3>
+            <ol className="mt-3 space-y-2 text-sm text-white/85 list-decimal list-inside">
+              <li>Scegli il prodotto/servizio da proporre a rate.</li>
+              <li>Il cliente seleziona il pagamento in 3 rate.</li>
+              <li>Viene eseguito il controllo automatico in pochi secondi.</li>
+              <li>
+                Il cliente paga la prima rata, le successive vengono addebitate
+                in automatico.
+              </li>
+            </ol>
+            <p className="mt-4 text-sm text-white/75">
+              Tu vedi tutto in una dashboard chiara: incassi, rate, status dei
+              pagamenti e statistiche di utilizzo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SERVIZI WEB FOCUS */}
+      <section id="servizi-web" className="bg-[#F6F5F2]">
+        <div className="mx-auto max-w-6xl px-4 py-14 grid md:grid-cols-2 gap-10 items-center">
+          <div className="reveal rounded-3xl bg-white p-6 shadow-[0_18px_40px_rgba(0,0,0,0.06)] border border-[#E2DED3]">
+            <h3 className="text-lg font-semibold">
+              Landing page, webapp, e-commerce
+            </h3>
+            <p className="mt-2 text-sm text-[#2B4A42] leading-relaxed">
+              Non ci fermiamo al POS: possiamo progettare e sviluppare per te
+              qualsiasi soluzione web legata al tuo business.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-[#2B4A42]">
+              <li>• Landing page per campagne pubblicitarie</li>
+              <li>• Siti vetrina moderni e ottimizzati mobile</li>
+              <li>• Webapp per gestire prenotazioni, ordini, clienti</li>
+              <li>• E-commerce integrati con Stripe, Dojo e Pay Later</li>
+            </ul>
+            <p className="mt-4 text-xs text-[#2B4A42]/70">
+              I testi e i dettagli tecnici li potrai adattare alla tua offerta
+              come sviluppatore full-stack.
+            </p>
+          </div>
+
+          <div className="reveal space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-semibold font-serif">
+              Il tuo Personal Developer
+            </h2>
+            <p className="text-[#2B4A42]">
+              Oltre ai pagamenti, puoi contare su un referente tecnico che si
+              occupa di tutta la parte web: design, sviluppo, integrazioni, SEO
+              di base e deployment.
+            </p>
+            <ul className="space-y-2 text-sm text-[#2B4A42]/90">
+              <li>• Un unico contatto per POS, Pay Later e web</li>
+              <li>• Progetti su misura, niente template generici</li>
+              <li>• Possibilità di evolvere il sito nel tempo</li>
+            </ul>
+            <Link
+              to="/contact-form"
+              className="inline-flex rounded-full bg-[#1BA97F] px-5 py-3 text-white text-sm font-semibold shadow hover:brightness-110"
+            >
+              Richiedi un progetto web
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* DIVENTA PARTNER */}
+      <section id="diventa-partner" className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-14 grid md:grid-cols-2 gap-10 items-center">
+          <div className="reveal space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-semibold font-serif">
+              Diventa Partner Expopay
+            </h2>
+            <p className="text-[#2B4A42]">
+              Sei un consulente, un&apos;agenzia o hai contatti con attività
+              locali? Puoi proporre Dojo, Pay Later e i nostri servizi web ai
+              tuoi clienti e guadagnare sulle attivazioni e sui progetti
+              digitali.
+            </p>
+            <ul className="text-sm text-[#2B4A42]/90 space-y-2">
+              <li>• Proponi POS Dojo, Pay Later e servizi web</li>
+              <li>• Accesso a materiali commerciali e supporto dedicato</li>
+              <li>• Commissioni e incentivi su attivazioni e progetti</li>
+            </ul>
+            <p className="text-xs text-[#2B4A42]/70">
+              Compila la scheda di raccolta dati: verrai ricontattato per
+              definire il modello di collaborazione più adatto a te.
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/form-partner-manager?tipo=partner"
+                className="rounded-full bg-[#1BA97F] px-5 py-3 text-white text-sm font-semibold shadow hover:brightness-110"
+              >
+                Compila la scheda Partner
+              </Link>
+            </div>
+          </div>
+
+          <div className="reveal rounded-2xl bg-[#F6F7F6] p-6 shadow-sm border border-black/5">
+            <h3 className="text-lg font-semibold">
+              A chi è pensato il programma Partner?
+            </h3>
+            <ul className="mt-3 space-y-2 text-sm text-[#2B4A42]">
+              <li>• Agenzie web e marketing</li>
+              <li>• Consulenti business e commerciali</li>
+              <li>• Professionisti che seguono più punti vendita</li>
+              <li>
+                • Chi vuole aggiungere un&apos;entrata ricorrente con i POS
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* DIVENTA PERSONAL MANAGER */}
+      <section
+        id="diventa-personal-manager"
+        className="bg-[#0F3E34] text-white"
+      >
+        <div className="mx-auto max-w-6xl px-4 py-14 grid md:grid-cols-2 gap-10 items-center">
+          <div className="reveal space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-semibold font-serif">
+              Diventa Personal Manager
+            </h2>
+            <p className="text-white/90">
+              Segui in modo dedicato un portafoglio di clienti: li aiuti a
+              scegliere il POS giusto, a usare Pay Later e a sviluppare la loro
+              presenza digitale. Crescono loro, cresci anche tu.
+            </p>
+            <ul className="space-y-2 text-sm text-white/80">
+              <li>• Gestisci un numero selezionato di attività</li>
+              <li>• Offri consulenza continuativa su pagamenti e digitale</li>
+              <li>• Possibilità di fee ricorrenti sui volumi e sui progetti</li>
+            </ul>
+            <p className="text-xs text-white/60">
+              Programma in evoluzione • Work in progress. I dettagli verranno
+              definiti insieme in fase di colloquio.
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/form-partner-manager?tipo=personal-manager"
+                className="rounded-full bg.white text-[#0F3E34] px-5 py-3 text-sm font-semibold shadow hover:opacity-90 bg-white"
+              >
+                Candidati come Personal Manager
+              </Link>
+            </div>
+          </div>
+
+          <div className="reveal rounded-2xl bg-white/5 p-6 border border-white/10">
+            <h3 className="text-lg font-semibold">Come funziona in pratica</h3>
+            <ol className="mt-3 space-y-2 text-sm text-white/85 list-decimal list-inside">
+              <li>Compili la scheda di candidatura con i tuoi dati.</li>
+              <li>
+                Valutiamo insieme il tuo territorio, i contatti e gli obiettivi.
+              </li>
+              <li>
+                Definiamo un percorso di onboarding e formazione su Dojo, Pay
+                Later e servizi web.
+              </li>
+              <li>
+                Inizi a seguire i clienti come punto di riferimento unico per
+                pagamenti e digitale.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* SEZIONI DOJO ORIGINALI */}
+
       <section id="features" className="py-10">
         <div className="mx-auto max-w-6xl px-4 grid md:grid-cols-3 gap-6">
           {[
@@ -205,7 +592,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* VANTAGGI 4 CARDS */}
       <section id="vantaggi" className="py-14">
         <div className="mx-auto max-w-6xl px-4">
           <div className="reveal max-w-2xl">
@@ -256,8 +642,6 @@ export default function App() {
             ))}
           </div>
 
-          {/* CTA banner */}
-          {/* ===== CATALOGHI DOJO (preview + download) ===== */}
           <div className="reveal mt-12">
             <h3 className="text-2xl sm:text-3xl font-semibold">
               Cataloghi Dojo
@@ -276,7 +660,6 @@ export default function App() {
                   key={i}
                   className="rounded-2xl bg-white border border-black/5 shadow-sm overflow-hidden flex flex-col"
                 >
-                  {/* Preview PDF: usa <iframe>. Se vuoi più compatibilità, puoi passare a <object>. */}
                   <div className="aspect-[4/5] bg-[#F6F7F6]">
                     <iframe
                       src={`${file}#view=FitH`}
@@ -310,7 +693,7 @@ export default function App() {
             className="reveal mt-10 rounded-2xl bg-[#1BA97F] text-white px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4"
           >
             <p className="text-lg font-medium text-center md:text-left">
-              Chiedi subito al tuo Referral Partner
+              Parla con noi di POS, Pay Later e servizi web
             </p>
             <Link
               to="/contact-form"
@@ -322,9 +705,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* ====== NUOVE SEZIONI (ONE-PAGE) ====== */}
-
-      {/* 1) VELOCITA */}
       <section id="velocita" className="bg-[#114B3E] text-white">
         <div className="mx-auto max-w-6xl px-4 py-10">
           <h2 className="text-4xl font-semibold">
@@ -341,6 +721,7 @@ export default function App() {
           </div>
         </div>
       </section>
+
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-4 py-10 grid md:grid-cols-2 gap-10">
           <div>
@@ -361,7 +742,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* 2) STORIE / TESTIMONIANZE */}
       <section id="storie" className="bg-[#F6F7F6]">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="text-4xl font-semibold">
@@ -411,7 +791,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* 3) PIU DI UN POS */}
       <section id="piu-di-un-pos" className="bg-[#0F3E34] text-white">
         <div className="mx-auto max-w-6xl px-4 py-12 grid md:grid-cols-2 gap-8 items-start">
           <div className="rounded-[28px] p-6">
@@ -470,7 +849,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* 4) VENDITE REALTIME */}
       <section id="vendite-realtime" className="bg-[#F6F7F6]">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="grid md:grid-cols-2 gap-10 items-start">
@@ -522,7 +900,7 @@ export default function App() {
               ].map(({ Icon, title, desc }, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl bg-white p-4 shadow-sm border border-black/5"
+                  className="rounded-2xl bg.white p-4 shadow-sm border border-black/5 bg-white"
                 >
                   <Icon className="h-6 w-6 text-[#0B6B56]" />
                   <h3 className="mt-2 font-semibold">{title}</h3>
@@ -534,7 +912,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* 5) NPS / TRUSTPILOT */}
       <section id="nps" className="bg-[#F6F7F6]">
         <div className="mx-auto max-w-6xl px-4 py-12 space-y-8">
           <div className="rounded-[28px] bg-[#FFD0C5] p-6">
@@ -572,7 +949,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer className="py-10 border-t border-black/5 bg-white">
         <div className="mx-auto max-w-6xl px-4 text-sm text-[#2B4A42]">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -591,7 +967,6 @@ export default function App() {
               </a>
             </div>
           </div>
-          <p className="mt-4 opacity-70 max-w-3xl"></p>
         </div>
       </footer>
     </div>
