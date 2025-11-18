@@ -1,6 +1,6 @@
 // CompilerDojo.jsx
 // VERSIONE MODULO ADESIONE PARTNER EXPOPAY
-// - Compila il PDF "modulo_adesione_expopay.pdf" (2 pagine)
+// - Compila il PDF "moduloadesionepartner.pdf" (2 pagine)
 // - Dati azienda, legale rappresentante, servizio, totali, note
 // - Firma cliente + firma Partner Manager
 // - Upload documenti + invio a backoffice
@@ -78,8 +78,10 @@ const CompilerAdesione = () => {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isSignatureClienteActive, setIsSignatureClienteActive] = useState(false);
-  const [isSignatureManagerActive, setIsSignatureManagerActive] = useState(false);
+  const [isSignatureClienteActive, setIsSignatureClienteActive] =
+    useState(false);
+  const [isSignatureManagerActive, setIsSignatureManagerActive] =
+    useState(false);
 
   const sigCanvasClienteRef = useRef();
   const sigCanvasManagerRef = useRef();
@@ -122,10 +124,8 @@ const CompilerAdesione = () => {
   const clearFirmaCliente = () => sigCanvasClienteRef.current?.clear();
   const clearFirmaManager = () => sigCanvasManagerRef.current?.clear();
 
-  const toggleSignatureCliente = () =>
-    setIsSignatureClienteActive((v) => !v);
-  const toggleSignatureManager = () =>
-    setIsSignatureManagerActive((v) => !v);
+  const toggleSignatureCliente = () => setIsSignatureClienteActive((v) => !v);
+  const toggleSignatureManager = () => setIsSignatureManagerActive((v) => !v);
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -170,9 +170,9 @@ const CompilerAdesione = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch(
-      "/moduloadesionepartner.pdf" // <-- cambia se il file ha un altro nome/percorso
-    ).then((res) => res.arrayBuffer());
+    const existingPdfBytes = await fetch("/moduloadesionepartner.pdf").then(
+      (res) => res.arrayBuffer()
+    );
 
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
@@ -257,7 +257,6 @@ const CompilerAdesione = () => {
     };
 
     // === COMPILAZIONE PAGINA 1 ===
-    // NB: le coordinate sono indicative, vanno rifinite in base al PDF reale
 
     // Dati azienda (colonna sinistra)
     drawTextOn(page1, formData.ragioneSociale, 155, 725, 11);
@@ -287,7 +286,6 @@ const CompilerAdesione = () => {
     drawTextOn(page1, formData.legaleMail, 320, 488, 10);
 
     // Descrizione servizio / quantità / prezzo
-    // Uso area grande centrale, testo descrizione multi-linea
     drawMultilineTextOn(page1, formData.descrizioneServizio, 40, 410, {
       size: 11,
       maxWidth: 360,
@@ -328,7 +326,6 @@ const CompilerAdesione = () => {
         drawTextOn(page2, formData.dataContratto, 84, 120, 11);
       }
 
-
       const firmaCliente = getFirmaClienteImage();
       if (firmaCliente) {
         const bytes = await fetch(firmaCliente).then((r) => r.arrayBuffer());
@@ -344,7 +341,8 @@ const CompilerAdesione = () => {
     setPdfUrl(url);
   };
 
-  const scaricaPdf = () => pdfUrl && saveAs(pdfUrl, "modulo_adesione_expopay.pdf");
+  const scaricaPdf = () =>
+    pdfUrl && saveAs(pdfUrl, "modulo_adesione_expopay.pdf");
 
   // ======= Invio backoffice =======
   const getFileSize = (f) => f?.size ?? 0;
@@ -352,6 +350,18 @@ const CompilerAdesione = () => {
 
   async function handleSubmitToClient() {
     if (!pdfUrl) return alert("Genera prima il PDF.");
+
+    // ---- VALIDAZIONE DESTINATARIO (per evitare No recipients defined) ----
+    const destinatario =
+      formData.personaleManagerMail?.trim() || formData.mailAzienda?.trim();
+    if (!destinatario) {
+      alert(
+        "Inserisci almeno una mail destinataria (mail azienda o mail Partner Manager) prima di inviare."
+      );
+      return;
+    }
+    // ---------------------------------------------------------------------
+
     setSubmitStatus(null);
     setIsSubmitting(true);
     try {
@@ -376,14 +386,22 @@ const CompilerAdesione = () => {
       );
 
       const payload = {
+        // dati "umani"
         nome: formData.ragioneSociale?.trim() || "Senza nome",
-        email: formData.mailAzienda?.trim() || "noreply@local",
+        email: formData.mailAzienda?.trim() || destinatario,
         telefono: formData.cellulareAzienda?.trim() || "",
         messaggio:
           formData.note ||
           `Modulo di adesione ExpoPay - servizio: ${
             formData.descrizioneServizio || ""
           }`,
+
+        // *** campi usati da nodemailer sul backend ***
+        to: destinatario || "backoffice@expopay.it", // cambia con la mail di backoffice reale
+        subject: `Nuovo modulo adesione ExpoPay - ${
+          formData.ragioneSociale || "Senza ragione sociale"
+        }`,
+
         attachments, // /api/sendToClient si aspetta questo nome
       };
 
@@ -910,9 +928,7 @@ const CompilerAdesione = () => {
                     : "bg-green-500 text-white"
                 }`}
               >
-                {isSignatureManagerActive
-                  ? "Disattiva firma"
-                  : "Attiva firma"}
+                {isSignatureManagerActive ? "Disattiva firma" : "Attiva firma"}
               </button>
             </div>
             {isSignatureManagerActive ? (
