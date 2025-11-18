@@ -8,6 +8,10 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
 import SignatureCanvas from "react-signature-canvas";
 
+const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
+// CAMBIA QUESTA CON LA MAIL DI BACKOFFICE REALE
+const DEFAULT_BACKOFFICE_EMAIL = "backoffice@expopay.it";
+
 const CompilerDojo = () => {
   // ======= Util =======
   const euro = (v) => {
@@ -125,8 +129,6 @@ const CompilerDojo = () => {
   const sigCanvasRef = useRef();
   const sigCanvasRef2 = useRef();
 
-  const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
-
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
       if (!file) return reject(new Error("File non definito"));
@@ -159,7 +161,7 @@ const CompilerDojo = () => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleFileChange = (event, sectionName) => {
-    const selectedFiles = Array.from(event.target.files);
+    const selectedFiles = Array.from(event.target.files || []);
     selectedFiles.forEach((file) => {
       Object.defineProperty(file, "section", {
         value: sectionName,
@@ -187,10 +189,12 @@ const CompilerDojo = () => {
       }
     });
   };
+
   const removeFile = (index) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setFilePreviews((prev) => prev.filter((_, i) => i !== index));
   };
+
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
@@ -266,7 +270,6 @@ const CompilerDojo = () => {
     };
 
     // Disegna una singola riga "Etichetta: Valore", con valore in grassetto.
-    // Gestisce il wrapping della parte Valore se supera il maxWidth.
     const drawLineLabelValue = (
       label,
       value,
@@ -310,30 +313,17 @@ const CompilerDojo = () => {
             font: fontBold,
             color: rgb(0, 0, 0),
           });
-          // nuova riga: label non più ripetuta, si parte da x originale
           cursorY -= lineHeight;
           line = words[i];
-          // per la riga successiva, tutto il valore occupa la larghezza maxWidth
-          // quindi se c'è ulteriore wrapping, ripartiamo da x base (non valueStartX)
-          while (true) {
-            const nextWidth = fontBold.widthOfTextAtSize(line, size);
-            if (nextWidth <= maxWidth) break;
-          }
-          // da qui in poi useremo x base per eventuali altre righe
           const rest = words.slice(i + 1).join(" ");
           if (rest) {
-            // delega il wrapping delle righe successive all'helper multiline
             drawMultilineText(line + " " + rest, x, cursorY, {
               size,
               maxWidth,
               lineHeight,
               whichFont: fontBold,
             });
-            return (
-              cursorY -
-              lineHeight *
-                Math.ceil(fontBold.widthOfTextAtSize(line, size) / maxWidth)
-            );
+            return cursorY - lineHeight;
           }
         }
       }
@@ -350,20 +340,6 @@ const CompilerDojo = () => {
       return cursorY - lineHeight;
     };
 
-    const drawLinesLabelValue = (
-      items, // [{label, value}]
-      x,
-      y,
-      opts = {}
-    ) => {
-      let cursorY = y;
-      for (const it of items) {
-        cursorY = drawLineLabelValue(it.label, it.value, x, cursorY, opts);
-      }
-      return cursorY;
-    };
-
-    // Disegna coppie Label: Valore in orizzontale, evidenziando SOLO il valore di Risparmio
     const drawInlineLabelValuePairs = (
       items, // [{label, value}]
       x,
@@ -373,14 +349,7 @@ const CompilerDojo = () => {
         lineHeight = 22,
         maxWidth = 560,
         gap = 24,
-        // Stili (0..1)
-        labelBg = { r: 0.86, g: 0.97, b: 0.86 }, // unused
-        valueBg = { r: 0.78, g: 0.93, b: 0.78 }, // unused
-        risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 }, // accento per Risparmio
-        labelColor = { r: 0.05, g: 0.25, b: 0.05 }, // unused
-        valueColor = { r: 0.00, g: 0.40, b: 0.00 }, // unused
-        paddingX = 4,
-        paddingY = 2,
+        risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 },
         boxOpacity = 0.9,
       } = {}
     ) => {
@@ -403,9 +372,12 @@ const CompilerDojo = () => {
           currY -= lineHeight;
         }
 
-        const isRisparmio = safeLabel.trim().toLowerCase().startsWith("risparmio:");
+        const isRisparmio = safeLabel
+          .trim()
+          .toLowerCase()
+          .startsWith("risparmio:");
 
-        // 1) Disegna SEMPRE la label senza background (nero)
+        // 1) Label normale
         page.drawText(safeLabel, {
           x: currX,
           y: currY,
@@ -414,12 +386,11 @@ const CompilerDojo = () => {
           color: rgb(0, 0, 0),
         });
 
-        // 2) Calcola x di partenza del valore
+        // 2) Valore
         const valueX = currX + labelW;
 
         if (isRisparmio) {
-          // Solo per RISPARMIO: evidenzia SOLO il valore con bg verde e testo verde bold
-          const vb = risparmioValueBg; // colore bg già definito negli argomenti
+          const vb = risparmioValueBg;
           const paddingX = 4;
           const paddingY = 2;
 
@@ -437,10 +408,9 @@ const CompilerDojo = () => {
             y: currY,
             size,
             font: fontBold,
-            color: rgb(0.00, 0.40, 0.00), // verde per il valore di Risparmio
+            color: rgb(0.0, 0.4, 0.0),
           });
         } else {
-          // Per tutte le altre voci: niente background, testo nero (label regular, valore bold)
           page.drawText(safeValue, {
             x: valueX,
             y: currY,
@@ -450,7 +420,6 @@ const CompilerDojo = () => {
           });
         }
 
-        // Avanza il cursore in orizzontale
         currX += labelW + valueW + gap;
       }
 
@@ -499,11 +468,10 @@ const CompilerDojo = () => {
     const unitDojo =
       sim.mode === "percentuale" ? `${r.dojoVal}%` : `${euro(r.dojoVal)}/tx`;
 
-    // Titolo spostato 40px a sx e 20px giù rispetto alla tua versione originale
     drawText("Riepilogo comparazione", 75, 530, 18, fontBold);
 
     const items = [
-      { label: "Transato", value: euro(r.transato)},
+      { label: "Transato", value: euro(r.transato) },
       { label: "Tariffa attuale", value: unitAtt },
       { label: "Tariffa Dojo", value: unitDojo },
       { label: "Totale attuale", value: euro(r.costoAttTot) },
@@ -553,6 +521,18 @@ const CompilerDojo = () => {
 
   async function handleSubmitToClient() {
     if (!pdfUrl) return alert("Genera prima il PDF.");
+
+    // ---- destinatario per la mail (per evitare No recipients defined) ----
+    const destinatario =
+      formData.email?.trim() || DEFAULT_BACKOFFICE_EMAIL || "";
+    if (!destinatario) {
+      alert(
+        "Inserisci una mail valida del cliente oppure configura la mail di backoffice."
+      );
+      return;
+    }
+    // ----------------------------------------------------------------------
+
     setSubmitStatus(null);
     setIsSubmitting(true);
     try {
@@ -577,10 +557,18 @@ const CompilerDojo = () => {
       );
 
       const payload = {
+        // dati “umani” che già usi sul backend
         nome: formData.ragione?.trim() || "Senza nome",
-        email: formData.email?.trim() || "noreply@local",
+        email: formData.email?.trim() || destinatario,
         telefono: formData.cell?.trim() || "",
         messaggio: formData.info || "",
+
+        // campi che Nodemailer si aspetta
+        to: destinatario,
+        subject: `Simulazione Dojo - ${
+          formData.ragione || "Senza ragione sociale"
+        }`,
+
         attachments, // /api/sendToClient si aspetta questo nome
       };
 
@@ -1185,7 +1173,7 @@ const CompilerDojo = () => {
             ) : (
               <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
                 <p className="text-gray-500 text-center">
-                  Clicca su "Attiva Firma" per firmare
+                  Clicca su "Attiva Firma" per firmare come Partner Manager
                 </p>
               </div>
             )}
