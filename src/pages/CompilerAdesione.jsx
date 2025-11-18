@@ -1,14 +1,16 @@
 // CompilerDojo.jsx
-// VERSIONE MODULO ADESIONE PARTNER EXPOPAY
-// - Compila il PDF "moduloadesionepartner.pdf" (2 pagine)
-// - Dati azienda, legale rappresentante, servizio, totali, note
-// - Firma cliente + firma Partner Manager
-// - Upload documenti + invio a backoffice
+// - Riepilogo comparazione nel PDF: titolo bold, righe separate, valori in grassetto
+// - Fix WinAnsi per pdf-lib StandardFonts
+// - UI web realtime invariata (simulatore + form + upload + anteprima)
 
 import React, { useState, useRef } from "react";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
 import SignatureCanvas from "react-signature-canvas";
+
+const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
+// CAMBIA QUESTA CON LA MAIL DI BACKOFFICE REALE
+const DEFAULT_BACKOFFICE_EMAIL = "backoffice@expopay.it";
 
 const CompilerAdesione = () => {
   // ======= Util =======
@@ -30,46 +32,89 @@ const CompilerAdesione = () => {
       .replace(/[\u{1F300}-\u{1FAFF}]/gu, ""); // emoji
   };
 
+  // ======= Stato simulatore (realtime UI) =======
+  const [sim, setSim] = useState({
+    transato: "", // € al mese
+    scontrino: "",
+    mode: "percentuale", // "percentuale" | "fissa"
+    attualeValore: "1.95",
+    dojoValore: "0.80",
+    includiCanone: true,
+  });
+
+  const handleSimChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setSim((s) => ({ ...s, [name]: type === "checkbox" ? checked : value }));
+  };
+
+  function computeSimulation() {
+    const transato = parseFloat(String(sim.transato).replace(",", ".")) || 0;
+    const scontrino = parseFloat(String(sim.scontrino).replace(",", ".")) || 0;
+    const attualeVal =
+      parseFloat(String(sim.attualeValore).replace(",", ".")) || 0;
+    const dojoVal = parseFloat(String(sim.dojoValore).replace(",", ".")) || 0;
+
+    const nTx = scontrino > 0 ? transato / scontrino : 0;
+
+    const costoAttuale =
+      sim.mode === "fissa" ? nTx * attualeVal : transato * (attualeVal / 100);
+    const costoDojo =
+      sim.mode === "fissa" ? nTx * dojoVal : transato * (dojoVal / 100);
+
+    const canoneAtt =
+      parseFloat(String(formData.canone || 0).replace(",", ".")) || 0;
+    const canoneDojo =
+      parseFloat(String(formData.canonedojo || 0).replace(",", ".")) || 0;
+
+    const costoAttTot = sim.includiCanone
+      ? costoAttuale + canoneAtt
+      : costoAttuale;
+    const costoDojoTot = sim.includiCanone ? costoDojo + canoneDojo : costoDojo;
+
+    const risparmio = Math.max(0, costoAttTot - costoDojoTot);
+    const rispPerc = costoAttTot > 0 ? (risparmio / costoAttTot) * 100 : 0;
+
+    return {
+      transato,
+      scontrino,
+      nTx,
+      costoAttuale,
+      costoDojo,
+      canoneAtt,
+      canoneDojo,
+      costoAttTot,
+      costoDojoTot,
+      risparmio,
+      rispPerc,
+      attualeVal,
+      dojoVal,
+    };
+  }
+
   // ======= Stato form e allegati =======
   const [formData, setFormData] = useState({
-    // DATI AZIENDA
-    ragioneSociale: "",
-    partitaIva: "",
-    codiceSdi: "",
-    pec: "",
-    codiceFiscaleAzienda: "",
-    sedeCommerciale: "",
-    citta: "",
-    provincia: "",
-    cellulareAzienda: "",
-    mailAzienda: "",
-    settoreMerceologico: "",
+    partnermanager: "",
+    email: "",
     iban: "",
+    cell: "",
+    ragione: "",
+    indirizzo: "",
+    debito: "",
+    credito: "",
+    business: "",
+    offdebito: "",
+    offcredito: "",
+    offbusiness: "",
+    marchio: "",
+    info: "",
 
-    // LEGALE RAPPRESENTANTE
-    legaleNomeCognome: "",
-    legaleCodiceFiscale: "",
-    legaleIndirizzo: "",
-    legaleCellulare: "",
-    legaleMail: "",
-
-    // SERVIZIO / ECONOMICO
-    descrizioneServizio: "",
-    quantita: "",
-    prezzo: "",
-    totale: "",
-    iva: "",
-    trasporto: "",
-    prezzoFinale: "",
-
-    // PERSONALE MANAGER
-    personaleManagerNome: "",
-    personaleManagerMail: "",
-    personaleManagerCell: "",
-
-    // NOTE & DATA
-    note: "",
-    dataContratto: "",
+    // NUOVI CAMPI
+    canone: "",
+    canonedojo: "",
+    transatoCredito: "",
+    transatoDebito: "",
+    scontrinoMedio: "",
+    scontrinoMassimo: "",
   });
 
   const [files, setFiles] = useState([]);
@@ -78,15 +123,11 @@ const CompilerAdesione = () => {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isSignatureClienteActive, setIsSignatureClienteActive] =
-    useState(false);
-  const [isSignatureManagerActive, setIsSignatureManagerActive] =
-    useState(false);
+  const [isSignature1Active, setIsSignature1Active] = useState(false);
+  const [isSignature2Active, setIsSignature2Active] = useState(false);
 
-  const sigCanvasClienteRef = useRef();
-  const sigCanvasManagerRef = useRef();
-
-  const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
+  const sigCanvasRef = useRef();
+  const sigCanvasRef2 = useRef();
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -106,26 +147,15 @@ const CompilerAdesione = () => {
       reader.readAsDataURL(file);
     });
 
-  const getFirmaClienteImage = () => {
-    if (!sigCanvasClienteRef.current || sigCanvasClienteRef.current.isEmpty())
-      return null;
-    return sigCanvasClienteRef.current
-      .getTrimmedCanvas()
-      .toDataURL("image/png");
+  const getFirmaImage = () => {
+    if (!sigCanvasRef.current || sigCanvasRef.current.isEmpty()) return null;
+    return sigCanvasRef.current.getTrimmedCanvas().toDataURL("image/png");
   };
-  const getFirmaManagerImage = () => {
-    if (!sigCanvasManagerRef.current || sigCanvasManagerRef.current.isEmpty())
-      return null;
-    return sigCanvasManagerRef.current
-      .getTrimmedCanvas()
-      .toDataURL("image/png");
-  };
+  const clearFirma = () => sigCanvasRef.current?.clear();
+  const clearFirma2 = () => sigCanvasRef2.current?.clear();
 
-  const clearFirmaCliente = () => sigCanvasClienteRef.current?.clear();
-  const clearFirmaManager = () => sigCanvasManagerRef.current?.clear();
-
-  const toggleSignatureCliente = () => setIsSignatureClienteActive((v) => !v);
-  const toggleSignatureManager = () => setIsSignatureManagerActive((v) => !v);
+  const toggleSignature1 = () => setIsSignature1Active((v) => !v);
+  const toggleSignature2 = () => setIsSignature2Active((v) => !v);
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -170,50 +200,33 @@ const CompilerAdesione = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/moduloadesionepartner.pdf").then(
-      (res) => res.arrayBuffer()
+    const existingPdfBytes = await fetch("/modellodojo.pdf").then((res) =>
+      res.arrayBuffer()
     );
-
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
     // Font standard
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const pages = pdfDoc.getPages();
-    const page1 = pages[0];
-    const page2 = pages[1] || pages[0];
+    const page = pdfDoc.getPages()[0];
 
-    const drawTextOn = (
-      page,
-      text,
-      x,
-      y,
-      size = 11,
-      whichFont = font,
-      color = rgb(0, 0, 0)
-    ) => {
-      page.drawText(sanitizeForWinAnsi(text || ""), {
+    const drawText = (text, x, y, size = 12, whichFont = font) => {
+      page.drawText(sanitizeForWinAnsi(text), {
         x,
         y,
         size,
         font: whichFont,
-        color,
+        color: rgb(0, 0, 0),
       });
     };
 
-    const drawMultilineTextOn = (
-      page,
+    // Testo multi-linea con wrapping e \n
+    const drawMultilineText = (
       text,
       x,
       y,
-      {
-        size = 11,
-        maxWidth = 520,
-        lineHeight = 14,
-        whichFont = font,
-        color = rgb(0, 0, 0),
-      } = {}
+      { size = 12, maxWidth = 560, lineHeight = 16, whichFont = font } = {}
     ) => {
       const blocks = String(text ?? "").split(/\n/);
       let cursorY = y;
@@ -236,7 +249,7 @@ const CompilerAdesione = () => {
               y: cursorY,
               size,
               font: whichFont,
-              color,
+              color: rgb(0, 0, 0),
             });
             cursorY -= lineHeight;
             line = words[i];
@@ -248,7 +261,7 @@ const CompilerAdesione = () => {
             y: cursorY,
             size,
             font: whichFont,
-            color,
+            color: rgb(0, 0, 0),
           });
           cursorY -= lineHeight;
         }
@@ -256,82 +269,241 @@ const CompilerAdesione = () => {
       return cursorY;
     };
 
-    // === COMPILAZIONE PAGINA 1 ===
+    // Disegna una singola riga "Etichetta: Valore", con valore in grassetto.
+    const drawLineLabelValue = (
+      label,
+      value,
+      x,
+      y,
+      { size = 16, maxWidth = 560, lineHeight = 22 } = {}
+    ) => {
+      const safeLabel = sanitizeForWinAnsi(label);
+      const safeValue = sanitizeForWinAnsi(value);
 
-    // Dati azienda (colonna sinistra)
-    drawTextOn(page1, formData.ragioneSociale, 155, 725, 11);
-    drawTextOn(page1, formData.partitaIva, 125, 705, 11);
-    drawTextOn(page1, formData.codiceSdi, 122, 683, 11);
-    drawTextOn(page1, formData.sedeCommerciale, 165, 665, 11);
-    drawTextOn(page1, formData.citta, 95, 645, 11);
-    drawTextOn(page1, formData.cellulareAzienda, 120, 625, 11);
-    drawTextOn(page1, formData.settoreMerceologico, 200, 605, 11);
+      // Disegna l'etichetta (regular)
+      page.drawText(safeLabel + ": ", {
+        x,
+        y,
+        size,
+        font,
+        color: rgb(0, 0, 0),
+      });
 
-    // Dati azienda (colonna destra)
-    drawTextOn(page1, formData.codiceFiscaleAzienda, 370, 707, 11);
-    drawTextOn(page1, formData.pec, 290, 683, 11);
-    drawTextOn(page1, formData.provincia, 470, 645, 11);
-    drawTextOn(page1, formData.mailAzienda, 300, 629, 11);
-    drawTextOn(page1, formData.iban, 390, 605, 11);
+      // Calcola x di partenza del valore
+      const labelWidth = font.widthOfTextAtSize(safeLabel + ": ", size);
+      const valueStartX = x + labelWidth;
 
-    // Legale rappresentante
-    drawTextOn(page1, formData.legaleNomeCognome, 152, 526, 11);
-    drawTextOn(page1, formData.legaleCodiceFiscale, 410, 525, 11);
-    drawMultilineTextOn(page1, formData.legaleIndirizzo, 170, 507, {
-      size: 11,
-      maxWidth: 260,
-      lineHeight: 13,
+      // Se il valore supera maxWidth, wrappiamo il valore su nuove righe
+      const availableWidth = Math.max(20, maxWidth - labelWidth);
+      const words = safeValue.split(/\s+/);
+      let line = "";
+      let cursorY = y;
+
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line ? `${line} ${words[i]}` : words[i];
+        const testWidth = fontBold.widthOfTextAtSize(testLine, size);
+        if (testWidth <= availableWidth) {
+          line = testLine;
+        } else {
+          // Disegna la parte accumulata
+          page.drawText(line, {
+            x: valueStartX,
+            y: cursorY,
+            size,
+            font: fontBold,
+            color: rgb(0, 0, 0),
+          });
+          cursorY -= lineHeight;
+          line = words[i];
+          const rest = words.slice(i + 1).join(" ");
+          if (rest) {
+            drawMultilineText(line + " " + rest, x, cursorY, {
+              size,
+              maxWidth,
+              lineHeight,
+              whichFont: fontBold,
+            });
+            return cursorY - lineHeight;
+          }
+        }
+      }
+
+      // Disegna l'ultima riga (o l'unica)
+      page.drawText(line, {
+        x: valueStartX,
+        y: cursorY,
+        size,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      return cursorY - lineHeight;
+    };
+
+    const drawInlineLabelValuePairs = (
+      items, // [{label, value}]
+      x,
+      y,
+      {
+        size = 16,
+        lineHeight = 22,
+        maxWidth = 560,
+        gap = 24,
+        risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 },
+        boxOpacity = 0.9,
+      } = {}
+    ) => {
+      let currX = x;
+      let currY = y;
+      const rowMaxX = x + maxWidth;
+
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const safeLabel = sanitizeForWinAnsi(String(it.label || "")) + ": ";
+        const safeValue = sanitizeForWinAnsi(String(it.value || ""));
+
+        const labelW = font.widthOfTextAtSize(safeLabel, size);
+        const valueW = fontBold.widthOfTextAtSize(safeValue, size);
+        const pairW = labelW + valueW + (i < items.length - 1 ? gap : 0);
+
+        // Se non ci stiamo in riga, vai a capo
+        if (currX + pairW > rowMaxX) {
+          currX = x;
+          currY -= lineHeight;
+        }
+
+        const isRisparmio = safeLabel
+          .trim()
+          .toLowerCase()
+          .startsWith("risparmio:");
+
+        // 1) Label normale
+        page.drawText(safeLabel, {
+          x: currX,
+          y: currY,
+          size,
+          font,
+          color: rgb(0, 0, 0),
+        });
+
+        // 2) Valore
+        const valueX = currX + labelW;
+
+        if (isRisparmio) {
+          const vb = risparmioValueBg;
+          const paddingX = 4;
+          const paddingY = 2;
+
+          page.drawRectangle({
+            x: valueX - paddingX,
+            y: currY - paddingY,
+            width: valueW + paddingX * 2,
+            height: size + paddingY * 2,
+            color: rgb(vb.r, vb.g, vb.b),
+            opacity: boxOpacity,
+          });
+
+          page.drawText(safeValue, {
+            x: valueX,
+            y: currY,
+            size,
+            font: fontBold,
+            color: rgb(0.0, 0.4, 0.0),
+          });
+        } else {
+          page.drawText(safeValue, {
+            x: valueX,
+            y: currY,
+            size,
+            font: fontBold,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        currX += labelW + valueW + gap;
+      }
+
+      return currY - lineHeight;
+    };
+
+    // ========= COMPILAZIONE PDF =========
+    // campi esistenti
+    drawText(formData.partnermanager, 555, 1045, 21);
+    drawText(formData.ragione, 230, 1202, 20);
+    drawText(formData.cell, 160, 1095, 20);
+    drawText(formData.email, 500, 1095, 20);
+    drawText(formData.iban, 120, 1045, 17);
+    drawMultilineText(formData.indirizzo || "", 350, 1170, {
+      size: 15,
+      maxWidth: 300,
+      lineHeight: 18,
     });
-    drawTextOn(page1, formData.legaleCellulare, 110, 485, 10);
-    drawTextOn(page1, formData.legaleMail, 320, 488, 10);
-
-    // Descrizione servizio / quantità / prezzo
-    drawMultilineTextOn(page1, formData.descrizioneServizio, 40, 410, {
-      size: 11,
-      maxWidth: 360,
-      lineHeight: 13,
-    });
-    drawTextOn(page1, formData.quantita, 410, 410, 11);
-    drawTextOn(page1, formData.prezzo, 500, 410, 11);
-
-    // Personale manager (in basso a sinistra)
-    drawTextOn(page1, formData.personaleManagerNome, 80, 207, 9);
-    drawTextOn(page1, formData.personaleManagerMail, 52, 197, 9);
-    drawTextOn(page1, formData.personaleManagerCell, 65, 185, 9);
-
-    // Totali (in basso a destra)
-    drawTextOn(page1, formData.totale, 390, 220, 11);
-    drawTextOn(page1, formData.iva, 390, 205, 11);
-    drawTextOn(page1, formData.trasporto, 410, 192, 11);
-    drawTextOn(page1, formData.prezzoFinale, 420, 170, 11, fontBold);
-
-    // Note
-    drawMultilineTextOn(page1, formData.note, 40, 110, {
-      size: 11,
-      maxWidth: 520,
-      lineHeight: 13,
+    drawText(formData.debito, 200, 855, 19);
+    drawText(formData.offdebito, 570, 855, 19);
+    drawText(formData.credito, 200, 895, 19);
+    drawText(formData.offcredito, 570, 895, 19);
+    drawText(formData.business, 200, 813, 19);
+    drawText(formData.offbusiness, 570, 813, 19);
+    drawText(formData.marchio, 220, 1135, 20);
+    drawMultilineText(formData.info || "", 167, 340, {
+      size: 18,
+      maxWidth: 590,
+      lineHeight: 18,
     });
 
-    // Firma Partner Manager (opzionale) – prima pagina
-    const firmaManager = getFirmaManagerImage();
-    if (firmaManager) {
-      const bytes = await fetch(firmaManager).then((r) => r.arrayBuffer());
+    // nuovi campi
+    drawText(formData.canone, 200, 765, 18);
+    drawText(formData.canonedojo, 510, 765, 18);
+    drawText(formData.transatoCredito, 250, 710, 18);
+    drawText(formData.transatoDebito, 250, 675, 18);
+    drawText(formData.scontrinoMedio, 570, 710, 18);
+    drawText(formData.scontrinoMassimo, 585, 675, 18);
+
+    // === RIEPILOGO TESTUALE (una riga per voce, valori in bold) ===
+    const r = computeSimulation();
+    const unitAtt =
+      sim.mode === "percentuale"
+        ? `${r.attualeVal}%`
+        : `${euro(r.attualeVal)}/tx`;
+    const unitDojo =
+      sim.mode === "percentuale" ? `${r.dojoVal}%` : `${euro(r.dojoVal)}/tx`;
+
+    drawText("Riepilogo comparazione", 75, 530, 18, fontBold);
+
+    const items = [
+      { label: "Transato", value: euro(r.transato) },
+      { label: "Tariffa attuale", value: unitAtt },
+      { label: "Tariffa Dojo", value: unitDojo },
+      { label: "Totale attuale", value: euro(r.costoAttTot) },
+      { label: "Totale Dojo", value: euro(r.costoDojoTot) },
+      {
+        label: "Risparmio",
+        value: `${euro(r.risparmio)} (${r.rispPerc.toFixed(1)}%)`,
+      },
+    ];
+
+    drawInlineLabelValuePairs(items, 75, 510, {
+      size: 16,
+      lineHeight: 22,
+      maxWidth: 590,
+      gap: 24,
+    });
+    // === fine riepilogo ===
+
+    // Firme
+    const firma1 = getFirmaImage();
+    if (firma1) {
+      const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      page1.drawImage(png, { x: 340, y: 150, width: 160, height: 45 });
+      page.drawImage(png, { x: 485, y: 105, width: 150, height: 50 });
     }
-
-    // === COMPILAZIONE PAGINA 2 (data + firma cliente) ===
-    if (page2) {
-      if (formData.dataContratto) {
-        drawTextOn(page2, formData.dataContratto, 84, 120, 11);
-      }
-
-      const firmaCliente = getFirmaClienteImage();
-      if (firmaCliente) {
-        const bytes = await fetch(firmaCliente).then((r) => r.arrayBuffer());
-        const png = await pdfDoc.embedPng(bytes);
-        page2.drawImage(png, { x: 380, y: 120, width: 180, height: 45 });
-      }
+    const firma2 = sigCanvasRef2.current
+      ?.getTrimmedCanvas()
+      .toDataURL("image/png");
+    if (firma2) {
+      const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
+      const png2 = await pdfDoc.embedPng(bytes2);
+      page.drawImage(png2, { x: 85, y: 105, width: 150, height: 50 });
     }
 
     // Salva e mostra anteprima
@@ -341,8 +513,7 @@ const CompilerAdesione = () => {
     setPdfUrl(url);
   };
 
-  const scaricaPdf = () =>
-    pdfUrl && saveAs(pdfUrl, "modulo_adesione_expopay.pdf");
+  const scaricaPdf = () => pdfUrl && saveAs(pdfUrl, "modulo_compilato.pdf");
 
   // ======= Invio backoffice =======
   const getFileSize = (f) => f?.size ?? 0;
@@ -351,22 +522,19 @@ const CompilerAdesione = () => {
   async function handleSubmitToClient() {
     if (!pdfUrl) return alert("Genera prima il PDF.");
 
-    // ---- VALIDAZIONE DESTINATARIO (per evitare No recipients defined) ----
-    const destinatario =
-      formData.personaleManagerMail?.trim() || formData.mailAzienda?.trim();
+    // ---- destinatario per la mail (per evitare No recipients defined) ----
+    const destinatario = formData.email?.trim();
     if (!destinatario) {
-      alert(
-        "Inserisci almeno una mail destinataria (mail azienda o mail Partner Manager) prima di inviare."
-      );
+      alert("Inserisci una mail valida nel campo Email.");
       return;
     }
-    // ---------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     setSubmitStatus(null);
     setIsSubmitting(true);
     try {
       const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
-      const pdfFile = new File([pdfBlob], "modulo_adesione_expopay.pdf", {
+      const pdfFile = new File([pdfBlob], "modulo.pdf", {
         type: "application/pdf",
       });
       const allFiles = [pdfFile, ...files];
@@ -386,23 +554,15 @@ const CompilerAdesione = () => {
       );
 
       const payload = {
-        // dati "umani"
-        nome: formData.ragioneSociale?.trim() || "Senza nome",
-        email: formData.mailAzienda?.trim() || destinatario,
-        telefono: formData.cellulareAzienda?.trim() || "",
-        messaggio:
-          formData.note ||
-          `Modulo di adesione ExpoPay - servizio: ${
-            formData.descrizioneServizio || ""
-          }`,
+        nome: formData.ragione?.trim() || "Senza nome",
+        email: destinatario, // opzionale ma ok
+        telefono: formData.cell?.trim() || "",
+        messaggio: formData.info || "",
 
-        // *** campi usati da nodemailer sul backend ***
-        to: destinatario || "backoffice@expopay.it", // cambia con la mail di backoffice reale
-        subject: `Nuovo modulo adesione ExpoPay - ${
-          formData.ragioneSociale || "Senza ragione sociale"
-        }`,
+        to: destinatario, // ⚠️ OBBLIGATORIO PER IL BACKEND
+        subject: `Simulazione Dojo - ${formData.ragione || "Cliente"}`,
 
-        attachments, // /api/sendToClient si aspetta questo nome
+        attachments,
       };
 
       const res = await fetch(API_CLIENTE, {
@@ -429,252 +589,310 @@ const CompilerAdesione = () => {
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:py-8 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-4 sm:p-6 lg:p-8 space-y-6">
         <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center">
-          Modulo di adesione partner ExpoPay
+          Compilazione modulo PDF
         </h2>
 
-        {/* Dati aziendali */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Dati aziendali
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <input
-              name="ragioneSociale"
-              placeholder="Ragione sociale"
-              value={formData.ragioneSociale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="partitaIva"
-              placeholder="Partita IVA"
-              value={formData.partitaIva}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="codiceSdi"
-              placeholder="Codice SDI"
-              value={formData.codiceSdi}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="pec"
-              placeholder="PEC"
-              value={formData.pec}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="codiceFiscaleAzienda"
-              placeholder="Codice fiscale (se diverso)"
-              value={formData.codiceFiscaleAzienda}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="sedeCommerciale"
-              placeholder="Sede commerciale"
-              value={formData.sedeCommerciale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="citta"
-              placeholder="Città"
-              value={formData.citta}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="provincia"
-              placeholder="Provincia"
-              value={formData.provincia}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="cellulareAzienda"
-              placeholder="Cellulare"
-              value={formData.cellulareAzienda}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="mailAzienda"
-              placeholder="Mail"
-              value={formData.mailAzienda}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="settoreMerceologico"
-              placeholder="Settore merceologico"
-              value={formData.settoreMerceologico}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
-            />
-            <input
-              name="iban"
-              placeholder="IBAN"
-              value={formData.iban}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
-            />
-          </div>
-        </div>
-
-        {/* Legale rappresentante */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Legale rappresentante
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <input
-              name="legaleNomeCognome"
-              placeholder="Nome e cognome"
-              value={formData.legaleNomeCognome}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="legaleCodiceFiscale"
-              placeholder="Codice fiscale"
-              value={formData.legaleCodiceFiscale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="legaleIndirizzo"
-              placeholder="Indirizzo di residenza"
-              value={formData.legaleIndirizzo}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
-            />
-            <input
-              name="legaleCellulare"
-              placeholder="Cellulare"
-              value={formData.legaleCellulare}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="legaleMail"
-              placeholder="Mail"
-              value={formData.legaleMail}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-        </div>
-
-        {/* Servizio e parte economica */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Descrizione servizio e condizioni economiche
-          </h3>
-          <textarea
-            name="descrizioneServizio"
-            placeholder="Descrizione servizio (verrà inserita nell'area 'DESCRIZIONE SERVIZIO' del modulo)"
-            value={formData.descrizioneServizio}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <input
-              name="quantita"
-              placeholder="Quantità"
-              value={formData.quantita}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="prezzo"
-              placeholder="Prezzo unitario / voce"
-              value={formData.prezzo}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="totale"
-              placeholder="Totale"
-              value={formData.totale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <input
-              name="iva"
-              placeholder="IVA"
-              value={formData.iva}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="trasporto"
-              placeholder="Trasporto"
-              value={formData.trasporto}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="prezzoFinale"
-              placeholder="Prezzo finale"
-              value={formData.prezzoFinale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base font-semibold"
-            />
-          </div>
-        </div>
-
-        {/* Personale manager */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Personale / Partner Manager ExpoPay
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <input
-              name="personaleManagerNome"
-              placeholder="Nome e cognome"
-              value={formData.personaleManagerNome}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="personaleManagerMail"
-              placeholder="Mail"
-              value={formData.personaleManagerMail}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="personaleManagerCell"
-              placeholder="Cellulare"
-              value={formData.personaleManagerCell}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-        </div>
-
-        {/* Note e data contratto */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Note e data contratto
-          </h3>
+        {/* Dati principali */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <input
-            name="dataContratto"
-            placeholder="Data (es. 18/11/2025)"
-            value={formData.dataContratto}
+            name="ragione"
+            placeholder="Ragione Sociale"
+            value={formData.ragione}
             onChange={handleChange}
-            className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
+          <input
+            name="marchio"
+            placeholder="Marchio/Insegna"
+            value={formData.marchio}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
+            name="cell"
+            placeholder="Cellulare"
+            value={formData.cell}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
+            name="iban"
+            placeholder="IBAN"
+            value={formData.iban}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
+            name="partnermanager"
+            placeholder="Partner Manager"
+            value={formData.partnermanager}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
+            name="indirizzo"
+            placeholder="Indirizzo sede attivazione POS"
+            value={formData.indirizzo}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
+          />
+        </div>
+
+        {/* Condizioni attuali vs Dojo */}
+        <div className="space-y-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Condizioni attuali e Offerte
+          </h3>
+
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+            <div className="space-y-3">
+              <h4 className="font-medium text-blue-800 text-sm sm:text-base">
+                Condizioni attuali
+              </h4>
+              <input
+                name="credito"
+                placeholder="Credito (CNS)"
+                value={formData.credito}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="debito"
+                placeholder="Debito (CNS)"
+                value={formData.debito}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="business"
+                placeholder="Business"
+                value={formData.business}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="font-medium text-blue-800 text-sm sm:text-base">
+                Condizioni Dojo
+              </h4>
+              <input
+                name="offcredito"
+                placeholder="Credito"
+                value={formData.offcredito}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="offdebito"
+                placeholder="Debito"
+                value={formData.offdebito}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="offbusiness"
+                placeholder="Business"
+                value={formData.offbusiness}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+            </div>
+          </div>
+
+          {/* Canoni */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <input
+              name="canone"
+              placeholder="Canone mensile"
+              value={formData.canone}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="canonedojo"
+              placeholder="Canone mensile Dojo"
+              value={formData.canonedojo}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+          </div>
+
+          {/* Transati/Scontrini */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <input
+              name="transatoCredito"
+              placeholder="Transato mese credito"
+              value={formData.transatoCredito}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="scontrinoMedio"
+              placeholder="Scontrino medio"
+              value={formData.scontrinoMedio}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="transatoDebito"
+              placeholder="Transato mese debito"
+              value={formData.transatoDebito}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="scontrinoMassimo"
+              placeholder="Scontrino massimo"
+              value={formData.scontrinoMassimo}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+          </div>
+        </div>
+
+        {/* === Simulatore Risparmio (realtime sulla pagina) === */}
+        <div className="space-y-4 border border-blue-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Simulatore risparmio
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Transato mensile (€)
+              </label>
+              <input
+                name="transato"
+                type="number"
+                min="0"
+                step="0.01"
+                value={sim.transato}
+                onChange={handleSimChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="es. 1500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Scontrino medio (€){" "}
+                {sim.mode === "fissa" ? "(obbligatorio)" : "(opzionale)"}
+              </label>
+              <input
+                name="scontrino"
+                type="number"
+                min="0"
+                step="0.01"
+                value={sim.scontrino}
+                onChange={handleSimChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="es. 20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Tariffa ATTUALE {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}
+              </label>
+              <input
+                name="attualeValore"
+                type="number"
+                min="0"
+                step="0.01"
+                value={sim.attualeValore}
+                onChange={handleSimChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder={
+                  sim.mode === "percentuale" ? "es. 1.95" : "es. 0.15"
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Tariffa DOJO {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}
+              </label>
+              <input
+                name="dojoValore"
+                type="number"
+                min="0"
+                step="0.01"
+                value={sim.dojoValore}
+                onChange={handleSimChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder={
+                  sim.mode === "percentuale" ? "es. 0.80" : "es. 0.05"
+                }
+              />
+            </div>
+
+            <div className="flex items-end">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="includiCanone"
+                  checked={sim.includiCanone}
+                  onChange={handleSimChange}
+                />
+                Includi canoni mensili
+              </label>
+            </div>
+          </div>
+
+          {/* Pannello risultati in tempo reale */}
+          {(() => {
+            const r = computeSimulation();
+            return (
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-600">
+                      Costo ATTUALE {sim.includiCanone ? "+ canone" : ""}
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {euro(r.costoAttTot)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">
+                      Costo con DOJO {sim.includiCanone ? "+ canone" : ""}
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {euro(r.costoDojoTot)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Risparmio</p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {euro(r.risparmio)}
+                    </p>
+                    <p className="text-xs text-green-700 font-medium">
+                      ({r.rispPerc.toFixed(1)}%)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Note */}
+        <div className="space-y-2">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Note
+          </h3>
           <textarea
-            name="note"
+            name="info"
             placeholder="Note"
-            value={formData.note}
+            value={formData.info}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
@@ -683,7 +901,7 @@ const CompilerAdesione = () => {
         {/* Upload documenti */}
         <div className="space-y-6">
           <h2 className="text-xl sm:text-2xl font-bold text-blue-900 text-center">
-            Caricamento documenti (allegati al modulo)
+            Caricamento Documenti
           </h2>
 
           {/* Visura Camerale */}
@@ -741,7 +959,7 @@ const CompilerAdesione = () => {
           <div className="bg-white border border-green-200 rounded-lg p-6 shadow-sm">
             <div className="space-y-4">
               <h3 className="text-lg sm:text-xl font-semibold text-green-900 flex items-center gap-2">
-                🆔 Documenti identità e Codice Fiscale legale rappresentante
+                🆔 Documenti Identità e Codice Fiscale
               </h3>
               <input
                 type="file"
@@ -843,7 +1061,7 @@ const CompilerAdesione = () => {
           {files.length > 0 && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Riepilogo documenti caricati ({files.length})
+                Riepilogo Documenti Caricati ({files.length})
               </h3>
               <div className="space-y-2">
                 {files.map((file, idx) => (
@@ -869,25 +1087,27 @@ const CompilerAdesione = () => {
 
         {/* Firme */}
         <div className="bg-gray-50 p-4 rounded-lg space-y-6">
-          {/* Firma Cliente */}
+          {/* Firma richiedente */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-              <p className="text-blue-900 font-semibold">Firma Cliente</p>
+              <p className="text-blue-900 font-semibold">
+                Firma del richiedente
+              </p>
               <button
-                onClick={toggleSignatureCliente}
+                onClick={toggleSignature1}
                 className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  isSignatureClienteActive
+                  isSignature1Active
                     ? "bg-red-500 text-white"
                     : "bg-green-500 text-white"
                 }`}
               >
-                {isSignatureClienteActive ? "Disattiva firma" : "Attiva firma"}
+                {isSignature1Active ? "Disattiva Firma" : "Attiva Firma"}
               </button>
             </div>
-            {isSignatureClienteActive ? (
+            {isSignature1Active ? (
               <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
                 <SignatureCanvas
-                  ref={sigCanvasClienteRef}
+                  ref={sigCanvasRef}
                   penColor="black"
                   canvasProps={{
                     width: 1000,
@@ -899,13 +1119,13 @@ const CompilerAdesione = () => {
             ) : (
               <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
                 <p className="text-gray-500 text-center">
-                  Clicca su "Attiva firma" per firmare come cliente
+                  Clicca su "Attiva Firma" per firmare
                 </p>
               </div>
             )}
-            {isSignatureClienteActive && (
+            {isSignature1Active && (
               <button
-                onClick={clearFirmaCliente}
+                onClick={clearFirma}
                 type="button"
                 className="mt-2 text-sm text-blue-700 underline"
               >
@@ -918,23 +1138,23 @@ const CompilerAdesione = () => {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <p className="text-blue-900 font-semibold">
-                Firma Partner Manager / ExpoPay
+                Firma Partner Manager
               </p>
               <button
-                onClick={toggleSignatureManager}
+                onClick={toggleSignature2}
                 className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  isSignatureManagerActive
+                  isSignature2Active
                     ? "bg-red-500 text-white"
                     : "bg-green-500 text-white"
                 }`}
               >
-                {isSignatureManagerActive ? "Disattiva firma" : "Attiva firma"}
+                {isSignature2Active ? "Disattiva Firma" : "Attiva Firma"}
               </button>
             </div>
-            {isSignatureManagerActive ? (
+            {isSignature2Active ? (
               <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
                 <SignatureCanvas
-                  ref={sigCanvasManagerRef}
+                  ref={sigCanvasRef2}
                   penColor="black"
                   canvasProps={{
                     width: 1000,
@@ -946,13 +1166,13 @@ const CompilerAdesione = () => {
             ) : (
               <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
                 <p className="text-gray-500 text-center">
-                  Clicca su "Attiva firma" per firmare come Partner Manager
+                  Clicca su "Attiva Firma" per firmare come Partner Manager
                 </p>
               </div>
             )}
-            {isSignatureManagerActive && (
+            {isSignature2Active && (
               <button
-                onClick={clearFirmaManager}
+                onClick={clearFirma2}
                 type="button"
                 className="mt-2 text-sm text-blue-700 underline"
               >
@@ -968,7 +1188,7 @@ const CompilerAdesione = () => {
             onClick={generaPdfPreview}
             className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-full"
           >
-            Genera anteprima PDF
+            Genera Anteprima PDF
           </button>
           <button
             onClick={scaricaPdf}
