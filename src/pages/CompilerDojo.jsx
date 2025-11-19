@@ -378,7 +378,7 @@ const CompilerDojo = () => {
         valueBg = { r: 0.78, g: 0.93, b: 0.78 }, // unused
         risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 }, // accento per Risparmio
         labelColor = { r: 0.05, g: 0.25, b: 0.05 }, // unused
-        valueColor = { r: 0.00, g: 0.40, b: 0.00 }, // unused
+        valueColor = { r: 0.0, g: 0.4, b: 0.0 }, // unused
         paddingX = 4,
         paddingY = 2,
         boxOpacity = 0.9,
@@ -403,7 +403,10 @@ const CompilerDojo = () => {
           currY -= lineHeight;
         }
 
-        const isRisparmio = safeLabel.trim().toLowerCase().startsWith("risparmio:");
+        const isRisparmio = safeLabel
+          .trim()
+          .toLowerCase()
+          .startsWith("risparmio:");
 
         // 1) Disegna SEMPRE la label senza background (nero)
         page.drawText(safeLabel, {
@@ -437,7 +440,7 @@ const CompilerDojo = () => {
             y: currY,
             size,
             font: fontBold,
-            color: rgb(0.00, 0.40, 0.00), // verde per il valore di Risparmio
+            color: rgb(0.0, 0.4, 0.0), // verde per il valore di Risparmio
           });
         } else {
           // Per tutte le altre voci: niente background, testo nero (label regular, valore bold)
@@ -503,7 +506,7 @@ const CompilerDojo = () => {
     drawText("Riepilogo comparazione", 75, 530, 18, fontBold);
 
     const items = [
-      { label: "Transato", value: euro(r.transato)},
+      { label: "Transato", value: euro(r.transato) },
       { label: "Tariffa attuale", value: unitAtt },
       { label: "Tariffa Dojo", value: unitDojo },
       { label: "Totale attuale", value: euro(r.costoAttTot) },

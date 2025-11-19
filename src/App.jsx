@@ -86,9 +86,13 @@ export default function App() {
             <a href="#diventa-personal-manager" className="hover:opacity-80">
               Diventa Personal Manager
             </a>
-            <a href="/compileradesione" className="hover:opacity-80">
-              Aderisci al BNPL
-            </a>
+
+          <Link
+            to="/compileradesione"
+            className="rounded-full bg-[#a91b1b] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
+          >
+            3 Rate
+          </Link>
           </div>
 
           <Link
