@@ -908,51 +908,6 @@ const CompilerAdesione = () => {
           </div>
 
           {/* Firma Partner Manager */}
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-              <p className="text-blue-900 font-semibold">
-                Firma Partner Manager / ExpoPay
-              </p>
-              <button
-                onClick={toggleSignatureManager}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  isSignatureManagerActive
-                    ? "bg-red-500 text-white"
-                    : "bg-green-500 text-white"
-                }`}
-              >
-                {isSignatureManagerActive ? "Disattiva firma" : "Attiva firma"}
-              </button>
-            </div>
-            {isSignatureManagerActive ? (
-              <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
-                <SignatureCanvas
-                  ref={sigCanvasManagerRef}
-                  penColor="black"
-                  canvasProps={{
-                    width: 1000,
-                    height: 150,
-                    className: "rounded-md",
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
-                <p className="text-gray-500 text-center">
-                  Clicca su "Attiva firma" per firmare come Partner Manager
-                </p>
-              </div>
-            )}
-            {isSignatureManagerActive && (
-              <button
-                onClick={clearFirmaManager}
-                type="button"
-                className="mt-2 text-sm text-blue-700 underline"
-              >
-                Cancella firma
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Pulsanti */}
