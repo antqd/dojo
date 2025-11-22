@@ -24,6 +24,7 @@ export default function App() {
   const heroImg = useRef(null);
 
   const [isDojoOpen, setDojoOpen] = useState(false);
+  const [isDojoBusinessOpen, setDojoBusinessOpen] = useState(false);
   const [isTreRateOpen, setTreRateOpen] = useState(false);
   const [isMobileOpen, setMobileOpen] = useState(false);
 
@@ -63,6 +64,7 @@ export default function App() {
 
   const closeAllMenus = () => {
     setDojoOpen(false);
+    setDojoBusinessOpen(false);
     setTreRateOpen(false);
     setMobileOpen(false);
   };
@@ -162,13 +164,60 @@ export default function App() {
               )}
             </div>
 
-            {/* DOJO BUSINESS (SENZA LINK PER ORA) */}
-            <button
-              type="button"
-              className="text-sm font-medium text-[#0B2B23] hover:opacity-80"
-            >
-              Dojo Business
-            </button>
+            {/* DOJO BUSINESS → App Store / Play Store */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setDojoBusinessOpen((prev) => !prev);
+                  setDojoOpen(false);
+                  setTreRateOpen(false);
+                }}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#0B2B23] hover:bg-black/5"
+              >
+                <span>Dojo Business</span>
+                <svg
+                  className={`h-4 w-4 transition-transform ${
+                    isDojoBusinessOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {isDojoBusinessOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
+                  <a
+                    href="https://apps.apple.com/gb/app/dojo-for-business/id1451518248"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Scarica su App Store (iOS)
+                  </a>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.merchant.application"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Scarica su Google Play (Android)
+                  </a>
+                </div>
+              )}
+            </div>
 
             {/* ATTIVA 3 RATE A TENDINA */}
             <div className="relative">
@@ -221,6 +270,24 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* LINK RAPIDI */}
+            <a
+              href="https://www.davveroo.it"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-full bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+            >
+              Davveroo
+            </a>
+            <a
+              href="https://www.expomarket.it"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-full bg-[#F97316] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+            >
+              Expomarket
+            </a>
           </div>
 
           {/* HAMBURGER MOBILE */}
@@ -328,11 +395,54 @@ export default function App() {
               {/* DOJO BUSINESS */}
               <button
                 type="button"
-                className="py-2 text-left font-medium"
-                // placeholder, per ora non linka
+                onClick={() => {
+                  setDojoBusinessOpen((prev) => !prev);
+                  setDojoOpen(false);
+                  setTreRateOpen(false);
+                }}
+                className="flex items-center justify-between py-2 font-medium"
               >
-                Dojo Business
+                <span>Dojo Business</span>
+                <svg
+                  className={`h-4 w-4 transition-transform ${
+                    isDojoBusinessOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
+              {isDojoBusinessOpen && (
+                <div className="ml-3 flex flex-col gap-1 pb-2">
+                  <a
+                    href="https://apps.apple.com/gb/app/dojo-for-business/id1451518248"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    App Store (iOS)
+                  </a>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.merchant.application"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Google Play (Android)
+                  </a>
+                </div>
+              )}
 
               {/* ATTIVA 3 RATE (accordion) */}
               <button
