@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -22,6 +22,10 @@ gsap.registerPlugin(ScrollTrigger);
 export default function App() {
   const root = useRef(null);
   const heroImg = useRef(null);
+
+  const [isDojoOpen, setDojoOpen] = useState(false);
+  const [isTreRateOpen, setTreRateOpen] = useState(false);
+  const [isMobileOpen, setMobileOpen] = useState(false);
 
   useGSAP(
     () => {
@@ -57,14 +61,27 @@ export default function App() {
     { scope: root }
   );
 
+  const closeAllMenus = () => {
+    setDojoOpen(false);
+    setTreRateOpen(false);
+    setMobileOpen(false);
+  };
+
   return (
     <div ref={root} className="min-h-screen bg-[#F6F7F6] text-[#0B2B23]">
       {/* NAVBAR */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-black/5">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+          {/* LOGO + TESTO SOTTO (INVARIATO) */}
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <img src="/images/logo.png" alt="DOJO" className="h-14" />
+              {/* Nome marchio visibile */}
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold tracking-wide uppercase text-[#0B2B23]">
+                  ExpoPay
+                </span>
+              </div>
               <span className="sr-only">Dojo</span>
             </div>
             <p className="text-xs text-[#2B4A42]">
@@ -73,35 +90,301 @@ export default function App() {
             </p>
           </div>
 
+          {/* NAV DESKTOP */}
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#chi-siamo" className="hover:opacity-80">
-              Chi siamo
-            </a>
-            <a href="#servizi" className="hover:opacity-80">
-              I nostri servizi
-            </a>
-            <a href="#diventa-partner" className="hover:opacity-80">
-              Diventa Partner
-            </a>
-            <a href="#diventa-personal-manager" className="hover:opacity-80">
-              Diventa Personal Manager
-            </a>
+            {/* MENU DOJO A TENDINA (SFONDO VERDE) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setDojoOpen((prev) => !prev);
+                  setTreRateOpen(false);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-[#1BA97F] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
+              >
+                <span>Dojo</span>
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
 
-          <Link
-            to="/compileradesione"
-            className="rounded-full bg-[#a91b1b] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
-          >
-            3 Rate
-          </Link>
+              {isDojoOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
+                  {/* Prima voce: Attiva Dojo */}
+                  <Link
+                    to="/compiler-dojo"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Attiva Dojo
+                  </Link>
+                  <a
+                    href="#chi-siamo"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Chi siamo
+                  </a>
+                  <a
+                    href="#servizi"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    I nostri servizi
+                  </a>
+                  <a
+                    href="#diventa-partner"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Diventa Partner
+                  </a>
+                  <a
+                    href="#diventa-personal-manager"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Diventa Personal Manager
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* DOJO BUSINESS (SENZA LINK PER ORA) */}
+            <button
+              type="button"
+              className="text-sm font-medium text-[#0B2B23] hover:opacity-80"
+            >
+              Dojo Business
+            </button>
+
+            {/* ATTIVA 3 RATE A TENDINA */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setTreRateOpen((prev) => !prev);
+                  setDojoOpen(false);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-[#a91b1b] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
+              >
+                <span>Attiva 3 Rate</span>
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {isTreRateOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
+                  {/* Area riservata → link esterno Davveroo */}
+                  <a
+                    href="https://www.davveroo.it/portal/login"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#FDF2F2]"
+                    onClick={closeAllMenus}
+                  >
+                    Area riservata
+                  </a>
+                  {/* Modulo di consenso → vecchio link di 3 Rate */}
+                  <Link
+                    to="/compileradesione"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#FDF2F2]"
+                    onClick={closeAllMenus}
+                  >
+                    Modulo di consenso
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
 
-          <Link
-            to="/compiler-dojo"
-            className="rounded-full bg-[#1BA97F] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
+          {/* HAMBURGER MOBILE */}
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-full border border-black/10 bg-white/70 backdrop-blur text-[#0B2B23]"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            aria-label="Apri menu"
           >
-            Attiva Dojo
-          </Link>
+            {isMobileOpen ? (
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 7h16" />
+                <path d="M4 12h16" />
+                <path d="M4 17h16" />
+              </svg>
+            )}
+          </button>
         </div>
+
+        {/* MOBILE MENU PANEL */}
+        {isMobileOpen && (
+          <div className="md:hidden border-t border-black/5 bg-white/95 backdrop-blur">
+            <nav className="mx-auto max-w-6xl px-4 py-3 flex flex-col gap-1 text-sm text-[#0B2B23]">
+              {/* DOJO (accordion) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDojoOpen((prev) => !prev);
+                  setTreRateOpen(false);
+                }}
+                className="flex items-center justify-between py-2"
+              >
+                <span className="font-medium">Dojo</span>
+                <svg
+                  className={`h-4 w-4 transition-transform ${
+                    isDojoOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {isDojoOpen && (
+                <div className="ml-3 flex flex-col gap-1 pb-2">
+                  <Link
+                    to="/compiler-dojo"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Attiva Dojo
+                  </Link>
+                  <a href="#chi-siamo" className="py-1" onClick={closeAllMenus}>
+                    Chi siamo
+                  </a>
+                  <a href="#servizi" className="py-1" onClick={closeAllMenus}>
+                    I nostri servizi
+                  </a>
+                  <a
+                    href="#diventa-partner"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Diventa Partner
+                  </a>
+                  <a
+                    href="#diventa-personal-manager"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Diventa Personal Manager
+                  </a>
+                </div>
+              )}
+
+              {/* DOJO BUSINESS */}
+              <button
+                type="button"
+                className="py-2 text-left font-medium"
+                // placeholder, per ora non linka
+              >
+                Dojo Business
+              </button>
+
+              {/* ATTIVA 3 RATE (accordion) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTreRateOpen((prev) => !prev);
+                  setDojoOpen(false);
+                }}
+                className="flex items-center justify-between py-2"
+              >
+                <span className="font-medium">Attiva 3 Rate</span>
+                <svg
+                  className={`h-4 w-4 transition-transform ${
+                    isTreRateOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {isTreRateOpen && (
+                <div className="ml-3 flex flex-col gap-1 pb-1">
+                  <a
+                    href="https://www.davveroo.it/portal/login"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Area riservata
+                  </a>
+                  <Link
+                    to="/compileradesione"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Modulo di consenso
+                  </Link>
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* HERO */}
@@ -527,7 +810,7 @@ export default function App() {
               scegliere il POS giusto, a usare Pay Later e a sviluppare la loro
               presenza digitale. Crescono loro, cresci anche tu.
             </p>
-            <ul className="space-y-2 text-sm text-white/80">
+            <ul className="space-y-2 text-sm text:white/80 text-white/80">
               <li>• Gestisci un numero selezionato di attività</li>
               <li>• Offri consulenza continuativa su pagamenti e digitale</li>
               <li>• Possibilità di fee ricorrenti sui volumi e sui progetti</li>
