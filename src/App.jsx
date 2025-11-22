@@ -69,11 +69,22 @@ export default function App() {
     setMobileOpen(false);
   };
 
+  const toggleMobileMenu = () => {
+    if (isMobileOpen) {
+      closeAllMenus();
+      return;
+    }
+    setDojoOpen(false);
+    setDojoBusinessOpen(false);
+    setTreRateOpen(false);
+    setMobileOpen(true);
+  };
+
   return (
     <div ref={root} className="min-h-screen bg-[#F6F7F6] text-[#0B2B23]">
       {/* NAVBAR */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-black/5">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+        <div className="mx-auto max-w-9xl px-4 py-4 flex items-center justify-between">
           {/* LOGO + TESTO SOTTO (INVARIATO) */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -94,6 +105,60 @@ export default function App() {
 
           {/* NAV DESKTOP */}
           <div className="hidden md:flex items-center gap-6 text-sm">
+            {/* DOJO BUSINESS → App Store / Play Store */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setDojoBusinessOpen((prev) => !prev);
+                  setDojoOpen(false);
+                  setTreRateOpen(false);
+                }}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#0B2B23] hover:bg-black/5"
+              >
+                <span>Dojo Business</span>
+                <svg
+                  className={`h-4 w-4 transition-transform ${
+                    isDojoBusinessOpen ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5L10 12L14.5 7.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {isDojoBusinessOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
+                  <a
+                    href="https://apps.apple.com/gb/app/dojo-for-business-payments/id1500585319"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Scarica su App Store (iOS)
+                  </a>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=uk.co.paymentsense.superpay"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Scarica su Google Play (Android)
+                  </a>
+                </div>
+              )}
+            </div>
             {/* MENU DOJO A TENDINA (SFONDO VERDE) */}
             <div className="relative">
               <button
@@ -101,6 +166,7 @@ export default function App() {
                 onClick={() => {
                   setDojoOpen((prev) => !prev);
                   setTreRateOpen(false);
+                  setDojoBusinessOpen(false);
                 }}
                 className="inline-flex items-center gap-2 rounded-full bg-[#1BA97F] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
               >
@@ -164,61 +230,6 @@ export default function App() {
               )}
             </div>
 
-            {/* DOJO BUSINESS → App Store / Play Store */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setDojoBusinessOpen((prev) => !prev);
-                  setDojoOpen(false);
-                  setTreRateOpen(false);
-                }}
-                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#0B2B23] hover:bg-black/5"
-              >
-                <span>Dojo Business</span>
-                <svg
-                  className={`h-4 w-4 transition-transform ${
-                    isDojoBusinessOpen ? "rotate-180" : ""
-                  }`}
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M5.5 7.5L10 12L14.5 7.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-
-              {isDojoBusinessOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
-                  <a
-                    href="https://apps.apple.com/gb/app/dojo-for-business/id1451518248"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
-                    onClick={closeAllMenus}
-                  >
-                    Scarica su App Store (iOS)
-                  </a>
-                  <a
-                    href="https://play.google.com/store/apps/details?id=com.merchant.application"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
-                    onClick={closeAllMenus}
-                  >
-                    Scarica su Google Play (Android)
-                  </a>
-                </div>
-              )}
-            </div>
-
             {/* ATTIVA 3 RATE A TENDINA */}
             <div className="relative">
               <button
@@ -226,6 +237,7 @@ export default function App() {
                 onClick={() => {
                   setTreRateOpen((prev) => !prev);
                   setDojoOpen(false);
+                  setDojoBusinessOpen(false);
                 }}
                 className="inline-flex items-center gap-2 rounded-full bg-[#a91b1b] px-4 py-2 text-white text-sm font-medium shadow hover:brightness-110"
               >
@@ -276,17 +288,25 @@ export default function App() {
               href="https://www.davveroo.it"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center rounded-full bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+              className="inline-flex items-center gap-2 rounded-full bg-[#ffffff] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
             >
-              Davveroo
+              <img
+                src="/loghi/davveroo.png"
+                alt="Davveroo"
+                className="h-9 w-auto"
+              />
             </a>
             <a
               href="https://www.expomarket.it"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center rounded-full bg-[#F97316] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+              className="inline-flex items-center gap-2 rounded-full bg-[#ffffff] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
             >
-              Expomarket
+              <img
+                src="/loghi/expomarket.png"
+                alt="Expomarket"
+                className="h-7 w-auto"
+              />
             </a>
           </div>
 
@@ -294,7 +314,7 @@ export default function App() {
           <button
             type="button"
             className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-full border border-black/10 bg-white/70 backdrop-blur text-[#0B2B23]"
-            onClick={() => setMobileOpen((prev) => !prev)}
+            onClick={toggleMobileMenu}
             aria-label="Apri menu"
           >
             {isMobileOpen ? (
@@ -338,6 +358,7 @@ export default function App() {
                 onClick={() => {
                   setDojoOpen((prev) => !prev);
                   setTreRateOpen(false);
+                  setDojoBusinessOpen(false);
                 }}
                 className="flex items-center justify-between py-2"
               >
@@ -450,6 +471,7 @@ export default function App() {
                 onClick={() => {
                   setTreRateOpen((prev) => !prev);
                   setDojoOpen(false);
+                  setDojoBusinessOpen(false);
                 }}
                 className="flex items-center justify-between py-2"
               >
@@ -492,6 +514,38 @@ export default function App() {
                   </Link>
                 </div>
               )}
+
+              {/* LINK RAPIDI */}
+              <div className="mt-2 flex flex-col gap-2">
+                <a
+                  href="https://www.davveroo.it"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+                  onClick={closeAllMenus}
+                >
+                  <img
+                    src="/davveroo.png"
+                    alt="Davveroo"
+                    className="h-5 w-auto"
+                  />
+                  Davveroo
+                </a>
+                <a
+                  href="https://www.expomarket.it"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#F97316] px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+                  onClick={closeAllMenus}
+                >
+                  <img
+                    src="/expomarket.png"
+                    alt="Expomarket"
+                    className="h-5 w-auto"
+                  />
+                  Expomarket
+                </a>
+              </div>
             </nav>
           </div>
         )}
