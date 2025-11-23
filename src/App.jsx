@@ -525,7 +525,7 @@ export default function App() {
                   onClick={closeAllMenus}
                 >
                   <img
-                    src="/davveroo.png"
+                    src="/loghi/davveroo.png"
                     alt="Davveroo"
                     className="h-5 w-auto"
                   />
@@ -539,7 +539,7 @@ export default function App() {
                   onClick={closeAllMenus}
                 >
                   <img
-                    src="/expomarket.png"
+                    src="/loghi/expomarket.png"
                     alt="Expomarket"
                     className="h-5 w-auto"
                   />
