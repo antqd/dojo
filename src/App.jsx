@@ -232,7 +232,7 @@ export default function App() {
 
             {/* ATTIVA 3 RATE A TENDINA */}
             <div className="relative">
-              <button
+              {/* <button
                 type="button"
                 onClick={() => {
                   setTreRateOpen((prev) => !prev);
@@ -257,7 +257,7 @@ export default function App() {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </button>
+              </button> */}
 
               {isTreRateOpen && (
                 <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
