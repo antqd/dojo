@@ -385,13 +385,13 @@ const CompilerAdesione = () => {
         telefono: formData.cellulareAzienda?.trim() || "",
         messaggio:
           formData.note ||
-          `Modulo di adesione ExpoPay - servizio: ${
+          `Modulo di adesione Davveroo - servizio: ${
             formData.descrizioneServizio || ""
           }`,
 
         // *** campi usati da nodemailer sul backend ***
         to: destinatario,
-        subject: `Nuovo modulo adesione ExpoPay - ${
+        subject: `Nuovo modulo adesione Davveroo - ${
           formData.ragioneSociale || "Senza ragione sociale"
         }`,
 
@@ -422,7 +422,7 @@ const CompilerAdesione = () => {
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:py-8 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-4 sm:p-6 lg:p-8 space-y-6">
         <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center">
-          Modulo di adesione partner ExpoPay
+          Modulo di adesione partner Davveroo
         </h2>
 
         {/* Dati aziendali */}
