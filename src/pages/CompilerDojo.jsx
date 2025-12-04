@@ -217,8 +217,8 @@ const CompilerDojo = () => {
     drawText(formData.email, 470, 1125, 20);
     drawText(formData.iban, 125, 1080, 20);
     drawMultilineText(formData.indirizzo || "", 260, 1200, {
-      size: 20,
-      maxWidth: 300,
+      size: 15,
+      maxWidth: 500,
       lineHeight: 18,
     });
     drawMultilineText(formData.indirizzo2 || "", 260, 1030, {
@@ -252,15 +252,14 @@ const CompilerDojo = () => {
     drawText(formData.transatoDebito, 90, 510, 18);
     drawText(formData.scontrinoMedio, 460, 590, 18);
     drawText(formData.scontrinoMassimo, 460, 510, 18);
-    drawText('firma1', 85, 125, 18);
-    drawText('firmacliente', 485, 125, 18);
+  
 
     // Firme
     const firma1 = getFirmaImage();
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      page.drawImage(png, { x: 485, y: 105, width: 150, height: 50 });
+      page.drawImage(png, { x: 485, y: 125, width: 180, height: 50 });
     }
     const firma2 = sigCanvasRef2.current
       ?.getTrimmedCanvas()
@@ -268,7 +267,7 @@ const CompilerDojo = () => {
     if (firma2) {
       const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
       const png2 = await pdfDoc.embedPng(bytes2);
-      page.drawImage(png2, { x: 85, y: 105, width: 150, height: 50 });
+      page.drawImage(png2, { x: 85, y: 125, width: 180, height: 50 });
     }
 
     // Salva e mostra anteprima
