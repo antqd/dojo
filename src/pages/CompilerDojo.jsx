@@ -1,7 +1,6 @@
 // CompilerDojo.jsx
-// - Riepilogo comparazione nel PDF: titolo bold, righe separate, valori in grassetto
 // - Fix WinAnsi per pdf-lib StandardFonts
-// - UI web realtime invariata (simulatore + form + upload + anteprima)
+// - UI per compilare il modulo PDF con allegati e firme
 
 import React, { useState, useRef } from "react";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
@@ -9,12 +8,6 @@ import { saveAs } from "file-saver";
 import SignatureCanvas from "react-signature-canvas";
 
 const CompilerDojo = () => {
-  // ======= Util =======
-  const euro = (v) => {
-    const n = Number(v || 0);
-    return n.toLocaleString("it-IT", { style: "currency", currency: "EUR" });
-  };
-
   // Sanifica caratteri non supportati da Helvetica (WinAnsi)
   const sanitizeForWinAnsi = (input) => {
     let s = String(input ?? "");
@@ -28,73 +21,19 @@ const CompilerDojo = () => {
       .replace(/[\u{1F300}-\u{1FAFF}]/gu, ""); // emoji
   };
 
-  // ======= Stato simulatore (realtime UI) =======
-  const [sim, setSim] = useState({
-    transato: "", // € al mese
-    scontrino: "",
-    mode: "percentuale", // "percentuale" | "fissa"
-    attualeValore: "1.95",
-    dojoValore: "0.80",
-    includiCanone: true,
-  });
-
-  const handleSimChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSim((s) => ({ ...s, [name]: type === "checkbox" ? checked : value }));
-  };
-
-  function computeSimulation() {
-    const transato = parseFloat(String(sim.transato).replace(",", ".")) || 0;
-    const scontrino = parseFloat(String(sim.scontrino).replace(",", ".")) || 0;
-    const attualeVal =
-      parseFloat(String(sim.attualeValore).replace(",", ".")) || 0;
-    const dojoVal = parseFloat(String(sim.dojoValore).replace(",", ".")) || 0;
-
-    const nTx = scontrino > 0 ? transato / scontrino : 0;
-
-    const costoAttuale =
-      sim.mode === "fissa" ? nTx * attualeVal : transato * (attualeVal / 100);
-    const costoDojo =
-      sim.mode === "fissa" ? nTx * dojoVal : transato * (dojoVal / 100);
-
-    const canoneAtt =
-      parseFloat(String(formData.canone || 0).replace(",", ".")) || 0;
-    const canoneDojo =
-      parseFloat(String(formData.canonedojo || 0).replace(",", ".")) || 0;
-
-    const costoAttTot = sim.includiCanone
-      ? costoAttuale + canoneAtt
-      : costoAttuale;
-    const costoDojoTot = sim.includiCanone ? costoDojo + canoneDojo : costoDojo;
-
-    const risparmio = Math.max(0, costoAttTot - costoDojoTot);
-    const rispPerc = costoAttTot > 0 ? (risparmio / costoAttTot) * 100 : 0;
-
-    return {
-      transato,
-      scontrino,
-      nTx,
-      costoAttuale,
-      costoDojo,
-      canoneAtt,
-      canoneDojo,
-      costoAttTot,
-      costoDojoTot,
-      risparmio,
-      rispPerc,
-      attualeVal,
-      dojoVal,
-    };
-  }
-
   // ======= Stato form e allegati =======
   const [formData, setFormData] = useState({
     partnermanager: "",
+    emailpartnermanager: "",
+    attualeGestore: "",
+    leadCanoneZero: false,
     email: "",
     iban: "",
     cell: "",
     ragione: "",
     indirizzo: "",
+    indirizzo2: "",
+    indirizzo3: "",
     debito: "",
     credito: "",
     business: "",
@@ -158,6 +97,9 @@ const CompilerDojo = () => {
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
+  const handleCheckboxChange = (name) => (e) =>
+    setFormData((prev) => ({ ...prev, [name]: e.target.checked }));
+
   const handleFileChange = (event, sectionName) => {
     const selectedFiles = Array.from(event.target.files);
     selectedFiles.forEach((file) => {
@@ -196,7 +138,7 @@ const CompilerDojo = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/modellodojo.pdf").then((res) =>
+    const existingPdfBytes = await fetch("/moduloDojo.pdf").then((res) =>
       res.arrayBuffer()
     );
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -265,220 +207,37 @@ const CompilerDojo = () => {
       return cursorY;
     };
 
-    // Disegna una singola riga "Etichetta: Valore", con valore in grassetto.
-    // Gestisce il wrapping della parte Valore se supera il maxWidth.
-    const drawLineLabelValue = (
-      label,
-      value,
-      x,
-      y,
-      { size = 16, maxWidth = 560, lineHeight = 22 } = {}
-    ) => {
-      const safeLabel = sanitizeForWinAnsi(label);
-      const safeValue = sanitizeForWinAnsi(value);
-
-      // Disegna l'etichetta (regular)
-      page.drawText(safeLabel + ": ", {
-        x,
-        y,
-        size,
-        font,
-        color: rgb(0, 0, 0),
-      });
-
-      // Calcola x di partenza del valore
-      const labelWidth = font.widthOfTextAtSize(safeLabel + ": ", size);
-      const valueStartX = x + labelWidth;
-
-      // Se il valore supera maxWidth, wrappiamo il valore su nuove righe
-      const availableWidth = Math.max(20, maxWidth - labelWidth);
-      const words = safeValue.split(/\s+/);
-      let line = "";
-      let cursorY = y;
-
-      for (let i = 0; i < words.length; i++) {
-        const testLine = line ? `${line} ${words[i]}` : words[i];
-        const testWidth = fontBold.widthOfTextAtSize(testLine, size);
-        if (testWidth <= availableWidth) {
-          line = testLine;
-        } else {
-          // Disegna la parte accumulata
-          page.drawText(line, {
-            x: valueStartX,
-            y: cursorY,
-            size,
-            font: fontBold,
-            color: rgb(0, 0, 0),
-          });
-          // nuova riga: label non più ripetuta, si parte da x originale
-          cursorY -= lineHeight;
-          line = words[i];
-          // per la riga successiva, tutto il valore occupa la larghezza maxWidth
-          // quindi se c'è ulteriore wrapping, ripartiamo da x base (non valueStartX)
-          while (true) {
-            const nextWidth = fontBold.widthOfTextAtSize(line, size);
-            if (nextWidth <= maxWidth) break;
-          }
-          // da qui in poi useremo x base per eventuali altre righe
-          const rest = words.slice(i + 1).join(" ");
-          if (rest) {
-            // delega il wrapping delle righe successive all'helper multiline
-            drawMultilineText(line + " " + rest, x, cursorY, {
-              size,
-              maxWidth,
-              lineHeight,
-              whichFont: fontBold,
-            });
-            return (
-              cursorY -
-              lineHeight *
-                Math.ceil(fontBold.widthOfTextAtSize(line, size) / maxWidth)
-            );
-          }
-        }
-      }
-
-      // Disegna l'ultima riga (o l'unica)
-      page.drawText(line, {
-        x: valueStartX,
-        y: cursorY,
-        size,
-        font: fontBold,
-        color: rgb(0, 0, 0),
-      });
-
-      return cursorY - lineHeight;
-    };
-
-    const drawLinesLabelValue = (
-      items, // [{label, value}]
-      x,
-      y,
-      opts = {}
-    ) => {
-      let cursorY = y;
-      for (const it of items) {
-        cursorY = drawLineLabelValue(it.label, it.value, x, cursorY, opts);
-      }
-      return cursorY;
-    };
-
-    // Disegna coppie Label: Valore in orizzontale, evidenziando SOLO il valore di Risparmio
-    const drawInlineLabelValuePairs = (
-      items, // [{label, value}]
-      x,
-      y,
-      {
-        size = 16,
-        lineHeight = 22,
-        maxWidth = 560,
-        gap = 24,
-        // Stili (0..1)
-        labelBg = { r: 0.86, g: 0.97, b: 0.86 }, // unused
-        valueBg = { r: 0.78, g: 0.93, b: 0.78 }, // unused
-        risparmioValueBg = { r: 0.65, g: 0.89, b: 0.65 }, // accento per Risparmio
-        labelColor = { r: 0.05, g: 0.25, b: 0.05 }, // unused
-        valueColor = { r: 0.0, g: 0.4, b: 0.0 }, // unused
-        paddingX = 4,
-        paddingY = 2,
-        boxOpacity = 0.9,
-      } = {}
-    ) => {
-      let currX = x;
-      let currY = y;
-      const rowMaxX = x + maxWidth;
-
-      for (let i = 0; i < items.length; i++) {
-        const it = items[i];
-        const safeLabel = sanitizeForWinAnsi(String(it.label || "")) + ": ";
-        const safeValue = sanitizeForWinAnsi(String(it.value || ""));
-
-        const labelW = font.widthOfTextAtSize(safeLabel, size);
-        const valueW = fontBold.widthOfTextAtSize(safeValue, size);
-        const pairW = labelW + valueW + (i < items.length - 1 ? gap : 0);
-
-        // Se non ci stiamo in riga, vai a capo
-        if (currX + pairW > rowMaxX) {
-          currX = x;
-          currY -= lineHeight;
-        }
-
-        const isRisparmio = safeLabel
-          .trim()
-          .toLowerCase()
-          .startsWith("risparmio:");
-
-        // 1) Disegna SEMPRE la label senza background (nero)
-        page.drawText(safeLabel, {
-          x: currX,
-          y: currY,
-          size,
-          font,
-          color: rgb(0, 0, 0),
-        });
-
-        // 2) Calcola x di partenza del valore
-        const valueX = currX + labelW;
-
-        if (isRisparmio) {
-          // Solo per RISPARMIO: evidenzia SOLO il valore con bg verde e testo verde bold
-          const vb = risparmioValueBg; // colore bg già definito negli argomenti
-          const paddingX = 4;
-          const paddingY = 2;
-
-          page.drawRectangle({
-            x: valueX - paddingX,
-            y: currY - paddingY,
-            width: valueW + paddingX * 2,
-            height: size + paddingY * 2,
-            color: rgb(vb.r, vb.g, vb.b),
-            opacity: boxOpacity,
-          });
-
-          page.drawText(safeValue, {
-            x: valueX,
-            y: currY,
-            size,
-            font: fontBold,
-            color: rgb(0.0, 0.4, 0.0), // verde per il valore di Risparmio
-          });
-        } else {
-          // Per tutte le altre voci: niente background, testo nero (label regular, valore bold)
-          page.drawText(safeValue, {
-            x: valueX,
-            y: currY,
-            size,
-            font: fontBold,
-            color: rgb(0, 0, 0),
-          });
-        }
-
-        // Avanza il cursore in orizzontale
-        currX += labelW + valueW + gap;
-      }
-
-      return currY - lineHeight;
-    };
-
     // ========= COMPILAZIONE PDF =========
     // campi esistenti
-    drawText(formData.partnermanager, 555, 1045, 21);
-    drawText(formData.ragione, 230, 1202, 20);
-    drawText(formData.cell, 160, 1095, 20);
-    drawText(formData.email, 500, 1095, 20);
-    drawText(formData.iban, 120, 1045, 17);
-    drawMultilineText(formData.indirizzo || "", 350, 1170, {
-      size: 15,
+    drawText(formData.partnermanager, 470, 1323, 21);
+    drawText(formData.emailpartnermanager, 470, 1290, 18);
+    drawText(formData.ragione, 310, 1170, 20);
+    drawText(formData.attualeGestore, 100, 880, 18);
+    drawText(formData.cell, 130, 1125, 20);
+    drawText(formData.email, 470, 1125, 20);
+    drawText(formData.iban, 125, 1080, 20);
+    drawMultilineText(formData.indirizzo || "", 260, 1200, {
+      size: 20,
       maxWidth: 300,
       lineHeight: 18,
     });
-    drawText(formData.debito, 200, 855, 19);
-    drawText(formData.offdebito, 570, 855, 19);
-    drawText(formData.credito, 200, 895, 19);
-    drawText(formData.offcredito, 570, 895, 19);
-    drawText(formData.business, 200, 813, 19);
-    drawText(formData.offbusiness, 570, 813, 19);
-    drawText(formData.marchio, 220, 1135, 20);
+    drawMultilineText(formData.indirizzo2 || "", 260, 1030, {
+      size: 20,
+      maxWidth: 300,
+      lineHeight: 18,
+    });
+    drawMultilineText(formData.indirizzo3 || "", 260, 1000, {
+      size: 20,
+      maxWidth: 300,
+      lineHeight: 18,
+    });
+    drawText(formData.debito, 230, 813, 19);
+    drawText(formData.offdebito, 575, 813, 19);
+    drawText(formData.credito, 230, 850, 19);
+    drawText(formData.offcredito, 575, 850, 19);
+    drawText(formData.business, 230, 770, 19);
+    drawText(formData.offbusiness, 575, 770, 19);
+    drawText(formData.marchio, 190, 1240, 20);
     drawMultilineText(formData.info || "", 167, 340, {
       size: 18,
       maxWidth: 590,
@@ -486,44 +245,15 @@ const CompilerDojo = () => {
     });
 
     // nuovi campi
-    drawText(formData.canone, 200, 765, 18);
-    drawText(formData.canonedojo, 510, 765, 18);
-    drawText(formData.transatoCredito, 250, 710, 18);
-    drawText(formData.transatoDebito, 250, 675, 18);
-    drawText(formData.scontrinoMedio, 570, 710, 18);
-    drawText(formData.scontrinoMassimo, 585, 675, 18);
-
-    // === RIEPILOGO TESTUALE (una riga per voce, valori in bold) ===
-    const r = computeSimulation();
-    const unitAtt =
-      sim.mode === "percentuale"
-        ? `${r.attualeVal}%`
-        : `${euro(r.attualeVal)}/tx`;
-    const unitDojo =
-      sim.mode === "percentuale" ? `${r.dojoVal}%` : `${euro(r.dojoVal)}/tx`;
-
-    // Titolo spostato 40px a sx e 20px giù rispetto alla tua versione originale
-    drawText("Riepilogo comparazione", 75, 530, 18, fontBold);
-
-    const items = [
-      { label: "Transato", value: euro(r.transato) },
-      { label: "Tariffa attuale", value: unitAtt },
-      { label: "Tariffa Dojo", value: unitDojo },
-      { label: "Totale attuale", value: euro(r.costoAttTot) },
-      { label: "Totale Dojo", value: euro(r.costoDojoTot) },
-      {
-        label: "Risparmio",
-        value: `${euro(r.risparmio)} (${r.rispPerc.toFixed(1)}%)`,
-      },
-    ];
-
-    drawInlineLabelValuePairs(items, 75, 510, {
-      size: 16,
-      lineHeight: 22,
-      maxWidth: 590,
-      gap: 24,
-    });
-    // === fine riepilogo ===
+    drawText(formData.canone, 230, 730, 18);
+    drawText(formData.canonedojo, 575, 730, 18);
+    drawText(formData.leadCanoneZero ? "SI" : "NO", 590, 690, 16);
+    drawText(formData.transatoCredito, 90, 590, 18);
+    drawText(formData.transatoDebito, 90, 510, 18);
+    drawText(formData.scontrinoMedio, 460, 590, 18);
+    drawText(formData.scontrinoMassimo, 460, 510, 18);
+    drawText('firma1', 85, 125, 18);
+    drawText('firmacliente', 485, 125, 18);
 
     // Firme
     const firma1 = getFirmaImage();
@@ -579,11 +309,25 @@ const CompilerDojo = () => {
         }))
       );
 
+      const extraPartnerMail = formData.emailpartnermanager?.trim()
+        ? `\nEmail Partner Manager: ${formData.emailpartnermanager.trim()}`
+        : "";
+      const extraAttualeGestore = formData.attualeGestore?.trim()
+        ? `\nAttuale gestore: ${formData.attualeGestore.trim()}`
+        : "";
+      const extraLeadCanoneZero = formData.leadCanoneZero
+        ? "\nLead canone zero 6 mesi: Sì"
+        : "";
+      const extraIndirizzi = [formData.indirizzo2, formData.indirizzo3]
+        .filter((v) => v?.trim())
+        .map((v, idx) => `\nIndirizzo ${idx + 2}: ${v.trim()}`)
+        .join("");
+
       const payload = {
         nome: formData.ragione?.trim() || "Senza nome",
         email: formData.email?.trim() || "noreply@local",
         telefono: formData.cell?.trim() || "",
-        messaggio: formData.info || "",
+        messaggio: `${formData.info || ""}${extraPartnerMail}${extraAttualeGestore}${extraLeadCanoneZero}${extraIndirizzi}`,
         attachments, // /api/sendToClient si aspetta questo nome
       };
 
@@ -631,6 +375,13 @@ const CompilerDojo = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
           <input
+            name="attualeGestore"
+            placeholder="Attuale gestore"
+            value={formData.attualeGestore}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
             name="cell"
             placeholder="Cellulare"
             value={formData.cell}
@@ -659,9 +410,30 @@ const CompilerDojo = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
           <input
+            name="emailpartnermanager"
+            placeholder="Email Partner Manager"
+            value={formData.emailpartnermanager}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
             name="indirizzo"
             placeholder="Indirizzo sede attivazione POS"
             value={formData.indirizzo}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
+          />
+          <input
+            name="indirizzo2"
+            placeholder="Indirizzo 2"
+            value={formData.indirizzo2}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
+          />
+          <input
+            name="indirizzo3"
+            placeholder="Indirizzo 3"
+            value={formData.indirizzo3}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
           />
@@ -745,6 +517,14 @@ const CompilerDojo = () => {
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
+            <label className="inline-flex items-center gap-2 text-sm sm:text-base">
+              <input
+                type="checkbox"
+                checked={formData.leadCanoneZero}
+                onChange={handleCheckboxChange("leadCanoneZero")}
+              />
+              Lead canone zero 6 mesi
+            </label>
           </div>
 
           {/* Transati/Scontrini */}
@@ -778,132 +558,6 @@ const CompilerDojo = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
           </div>
-        </div>
-
-        {/* === Simulatore Risparmio (realtime sulla pagina) === */}
-        <div className="space-y-4 border border-blue-200 rounded-lg p-4 sm:p-6">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Simulatore risparmio
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">
-                Transato mensile (€)
-              </label>
-              <input
-                name="transato"
-                type="number"
-                min="0"
-                step="0.01"
-                value={sim.transato}
-                onChange={handleSimChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="es. 1500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">
-                Scontrino medio (€){" "}
-                {sim.mode === "fissa" ? "(obbligatorio)" : "(opzionale)"}
-              </label>
-              <input
-                name="scontrino"
-                type="number"
-                min="0"
-                step="0.01"
-                value={sim.scontrino}
-                onChange={handleSimChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="es. 20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">
-                Tariffa ATTUALE {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}
-              </label>
-              <input
-                name="attualeValore"
-                type="number"
-                min="0"
-                step="0.01"
-                value={sim.attualeValore}
-                onChange={handleSimChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder={
-                  sim.mode === "percentuale" ? "es. 1.95" : "es. 0.15"
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">
-                Tariffa DOJO {sim.mode === "percentuale" ? "(%)" : "(€/tx)"}
-              </label>
-              <input
-                name="dojoValore"
-                type="number"
-                min="0"
-                step="0.01"
-                value={sim.dojoValore}
-                onChange={handleSimChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder={
-                  sim.mode === "percentuale" ? "es. 0.80" : "es. 0.05"
-                }
-              />
-            </div>
-
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="includiCanone"
-                  checked={sim.includiCanone}
-                  onChange={handleSimChange}
-                />
-                Includi canoni mensili
-              </label>
-            </div>
-          </div>
-
-          {/* Pannello risultati in tempo reale */}
-          {(() => {
-            const r = computeSimulation();
-            return (
-              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-600">
-                      Costo ATTUALE {sim.includiCanone ? "+ canone" : ""}
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {euro(r.costoAttTot)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">
-                      Costo con DOJO {sim.includiCanone ? "+ canone" : ""}
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {euro(r.costoDojoTot)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Risparmio</p>
-                    <p className="text-2xl font-bold text-green-700">
-                      {euro(r.risparmio)}
-                    </p>
-                    <p className="text-xs text-green-700 font-medium">
-                      ({r.rispPerc.toFixed(1)}%)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
 
         {/* Note */}

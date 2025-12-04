@@ -283,7 +283,7 @@ export default function App() {
               )}
             </div>
 
-            {/* LINK RAPIDI */}
+            {/* LINK RAPIDI
             <a
               href="https://www.davveroo.it"
               target="_blank"
@@ -307,7 +307,7 @@ export default function App() {
                 alt="Expomarket"
                 className="h-7 w-auto"
               />
-            </a>
+            </a>*/}
           </div>
 
           {/* HAMBURGER MOBILE */}
@@ -516,7 +516,7 @@ export default function App() {
               )}
 
               {/* LINK RAPIDI */}
-              <div className="mt-2 flex flex-col gap-2">
+              {/* <div className="mt-2 flex flex-col gap-2">
                 <a
                   href="https://www.davveroo.it"
                   target="_blank"
@@ -545,7 +545,7 @@ export default function App() {
                   />
                   Expomarket
                 </a>
-              </div>
+              </div> */}
             </nav>
           </div>
         )}
