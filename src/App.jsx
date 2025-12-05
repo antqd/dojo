@@ -231,7 +231,7 @@ export default function App() {
             </div>
 
             {/* ATTIVA 3 RATE A TENDINA */}
-            <div className="relative">
+            {/* <div className="relative"> */}
               {/* <button
                 type="button"
                 onClick={() => {
@@ -256,32 +256,8 @@ export default function App() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                </svg>
-              </button> */}
 
-              {isTreRateOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black/5 overflow-hidden text-sm">
-                  {/* Area riservata → link esterno Davveroo */}
-                  <a
-                    href="https://www.davveroo.it/portal/login"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#FDF2F2]"
-                    onClick={closeAllMenus}
-                  >
-                    Area riservata
-                  </a>
-                  {/* Modulo di consenso → vecchio link di 3 Rate */}
-                  <Link
-                    to="/compileradesione"
-                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#FDF2F2]"
-                    onClick={closeAllMenus}
-                  >
-                    Modulo di consenso
-                  </Link>
-                </div>
-              )}
-            </div>
+            {/* </div> */}
 
             {/* LINK RAPIDI
             <a
