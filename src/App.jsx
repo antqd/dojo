@@ -532,9 +532,9 @@ export default function App() {
         <div className="pointer-events-none absolute -top-32 -right-24 h-96 w-96 rounded-full bg-[#1BA97F]/10 blur-3xl" />
         <div className="mx-auto max-w-6xl px-4 grid lg:grid-cols-2 gap-10 items-center py-16">
           <div>
-            <p className="hero-stagger text-xs uppercase tracking-[0.2em] text-[#1BA97F] mb-3">
+            {/* <p className="hero-stagger text-xs uppercase tracking-[0.2em] text-[#1BA97F] mb-3">
               Expopay • POS Dojo • Pay Later • Servizi web
-            </p>
+            </p> */}
             <h1 className="hero-stagger text-4xl sm:text-5xl font-semibold leading-tight text-[#0B2B23] font-serif">
               Pagamenti, rate e web
               <br />
@@ -542,8 +542,7 @@ export default function App() {
               <span className="text-[#1BA97F]">partner digitale</span>
             </h1>
             <p className="hero-stagger mt-4 text-base text-[#2B4A42] max-w-xl">
-              Non solo POS Dojo: ti aiutiamo a incassare, vendere a rate in 3
-              pagamenti e portare la tua attività online con landing page,
+              Non solo POS Dojo: ti aiutiamo a incassare, e portare la tua attività online con landing page,
               webapp ed e-commerce su misura.
             </p>
 
@@ -585,16 +584,16 @@ export default function App() {
                   Pagamenti rapidi in negozio.
                 </p>
               </a>
-              <a
+              {/* <a
                 href="#servizi-pay-later"
                 className="rounded-2xl bg-[#F6F7F6] border border-black/5 px-4 py-3 shadow-sm hover:shadow transition"
               >
-                <p className="font-semibold">Pay Later in 3 rate</p>
+                {/* <p className="font-semibold">Pay Later in 3 rate</p>
                 <p className="text-xs text-[#2B4A42]/80">
                   Vendi in 3 pagamenti con Stripe/Klarna.
-                </p>
-              </a>
-              <a
+                </p> 
+              </a> */}
+              {/* <a
                 href="#servizi-web-digitali"
                 className="rounded-2xl bg-[#F6F7F6] border border-black/5 px-4 py-3 shadow-sm hover:shadow transition"
               >
@@ -602,7 +601,7 @@ export default function App() {
                 <p className="text-xs text-[#2B4A42]/80">
                   Landing, webapp, e-commerce.
                 </p>
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -742,7 +741,7 @@ export default function App() {
             </div>
 
             {/* PAY LATER IN 3 RATE */}
-            <div
+            {/* <div
               id="servizi-pay-later"
               className="reveal rounded-3xl bg-[#0F3E34] p-6 shadow-[0_18px_36px_rgba(0,0,0,0.35)] text-white relative overflow-hidden"
             >
@@ -765,7 +764,7 @@ export default function App() {
                 </li>
                 <li>• Integrazione con POS fisico e/o checkout online</li>
               </ul>
-            </div>
+            </div> */}
 
             {/* SERVIZI WEB & DIGITALI */}
             <div
@@ -795,7 +794,7 @@ export default function App() {
       </section>
 
       {/* PAY LATER FOCUS */}
-      <section id="pay-later" className="bg-[#0F3E34] text-white">
+      {/* <section id="pay-later" className="bg-[#0F3E34] text-white">
         <div className="mx-auto max-w-6xl px-4 py-14 grid md:grid-cols-2 gap-10 items-center">
           <div className="reveal space-y-4">
             <h2 className="text-3xl sm:text-4xl font-semibold font-serif">
@@ -835,9 +834,9 @@ export default function App() {
               Tu vedi tutto in una dashboard chiara: incassi, rate, status dei
               pagamenti e statistiche di utilizzo.
             </p>
-          </div> */}
+          </div> 
         </div>
-      </section>
+      </section> */}
 
       {/* SERVIZI WEB FOCUS */}
       <section id="servizi-web" className="bg-[#F6F5F2]">
@@ -895,12 +894,12 @@ export default function App() {
             </h2>
             <p className="text-[#2B4A42]">
               Sei un consulente, un&apos;agenzia o hai contatti con attività
-              locali? Puoi proporre Dojo, Pay Later e i nostri servizi web ai
+              locali? Puoi proporre Dojo, ai
               tuoi clienti e guadagnare sulle attivazioni e sui progetti
               digitali.
             </p>
             <ul className="text-sm text-[#2B4A42]/90 space-y-2">
-              <li>• Proponi POS Dojo, Pay Later e servizi web</li>
+              <li>• Proponi POS Dojo, e servizi web</li>
               <li>• Accesso a materiali commerciali e supporto dedicato</li>
               <li>• Commissioni e incentivi su attivazioni e progetti</li>
             </ul>
@@ -1123,7 +1122,7 @@ export default function App() {
             className="reveal mt-10 rounded-2xl bg-[#1BA97F] text-white px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4"
           >
             <p className="text-lg font-medium text-center md:text-left">
-              Parla con noi di POS, Pay Later e servizi web
+              Parla con noi di POS
             </p>
             <Link
               to="/contact-form"

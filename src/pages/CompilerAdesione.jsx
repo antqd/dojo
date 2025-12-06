@@ -48,12 +48,12 @@ const CompilerAdesione = () => {
 
     // SERVIZIO / ECONOMICO
     descrizioneServizio: "",
-    quantita: "",
-    prezzo: "",
-    totale: "",
-    iva: "",
-    trasporto: "",
-    prezzoFinale: "",
+    servizioPagaTreRate: false,
+    servizioGiftCard: false,
+    servizioPosVirtuale: false,
+    servizioCardAziendali: false,
+    servizioAltro: false,
+    servizioAltroDescrizione: "",
 
     // PERSONALE MANAGER
     personaleManagerNome: "",
@@ -122,6 +122,8 @@ const CompilerAdesione = () => {
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleCheckboxChange = (field) => (e) =>
+    setFormData((prev) => ({ ...prev, [field]: e.target.checked }));
 
   const handleFileChange = (event, sectionName) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -163,7 +165,7 @@ const CompilerAdesione = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/moduloadesionepartner.pdf").then(
+    const existingPdfBytes = await fetch("/moduloadesionepartner1.pdf").then(
       (res) => res.arrayBuffer()
     );
 
@@ -278,25 +280,31 @@ const CompilerAdesione = () => {
     drawTextOn(page1, formData.legaleCellulare, 110, 485, 10);
     drawTextOn(page1, formData.legaleMail, 320, 488, 10);
 
-    // Descrizione servizio / quantità / prezzo
-    drawMultilineTextOn(page1, formData.descrizioneServizio, 40, 410, {
+    // Descrizione servizio + servizi selezionati
+    drawMultilineTextOn(page1, formData.descrizioneServizio, 70, 275, {
       size: 11,
       maxWidth: 360,
       lineHeight: 13,
     });
-    drawTextOn(page1, formData.quantita, 410, 410, 11);
-    drawTextOn(page1, formData.prezzo, 500, 410, 11);
+
+    // Checkboxes sul template
+    const checkboxMap = [
+      { field: "servizioPagaTreRate", x: 38, y: 418 },
+      { field: "servizioGiftCard", x: 38, y: 392 },
+      { field: "servizioPosVirtuale", x: 38, y: 368 },
+      { field: "servizioCardAziendali", x: 38, y: 342  },
+      { field: "servizioAltro", x: 38, y: 315 },
+    ];
+    checkboxMap.forEach(({ field, x, y }) => {
+      if (formData[field]) {
+        drawTextOn(page1, "X", x, y, 12, fontBold);
+      }
+    });
 
     // Personale manager (in basso a sinistra)
-    drawTextOn(page1, formData.personaleManagerNome, 80, 207, 9);
-    drawTextOn(page1, formData.personaleManagerMail, 52, 197, 9);
-    drawTextOn(page1, formData.personaleManagerCell, 65, 185, 9);
-
-    // Totali (in basso a destra)
-    drawTextOn(page1, formData.totale, 390, 220, 11);
-    drawTextOn(page1, formData.iva, 390, 205, 11);
-    drawTextOn(page1, formData.trasporto, 410, 192, 11);
-    drawTextOn(page1, formData.prezzoFinale, 420, 170, 11, fontBold);
+    drawTextOn(page1, formData.personaleManagerNome, 140, 220, 9);
+    drawTextOn(page1, formData.personaleManagerMail, 100, 205, 9);
+    drawTextOn(page1, formData.personaleManagerCell, 110, 187, 9);
 
     // Note
     drawMultilineTextOn(page1, formData.note, 40, 110, {
@@ -567,6 +575,63 @@ const CompilerAdesione = () => {
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
             Descrizione servizio e condizioni economiche
           </h3>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-800">
+              Seleziona i servizi
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.servizioPagaTreRate}
+                  onChange={handleCheckboxChange("servizioPagaTreRate")}
+                />
+                Servizio paga in 3 rate
+              </label>
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.servizioGiftCard}
+                  onChange={handleCheckboxChange("servizioGiftCard")}
+                />
+                Servizio pubblicazione Gift Card Davveroo.it
+              </label>
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.servizioPosVirtuale}
+                  onChange={handleCheckboxChange("servizioPosVirtuale")}
+                />
+                Servizio pos virtuale
+              </label>
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.servizioCardAziendali}
+                  onChange={handleCheckboxChange("servizioCardAziendali")}
+                />
+                Servizio emissione card aziendali
+              </label>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm sm:text-base">
+                  <input
+                    type="checkbox"
+                    checked={formData.servizioAltro}
+                    onChange={handleCheckboxChange("servizioAltro")}
+                  />
+                  Altro
+                </label>
+                <input
+                  name="servizioAltroDescrizione"
+                  placeholder="Specifica il servizio 'Altro'"
+                  value={formData.servizioAltroDescrizione}
+                  onChange={handleChange}
+                  disabled={!formData.servizioAltro}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+          </div>
           <textarea
             name="descrizioneServizio"
             placeholder="Descrizione servizio (verrà inserita nell'area 'DESCRIZIONE SERVIZIO' del modulo)"
@@ -574,52 +639,6 @@ const CompilerAdesione = () => {
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <input
-              name="quantita"
-              placeholder="Quantità"
-              value={formData.quantita}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="prezzo"
-              placeholder="Prezzo unitario / voce"
-              value={formData.prezzo}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="totale"
-              placeholder="Totale"
-              value={formData.totale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <input
-              name="iva"
-              placeholder="IVA"
-              value={formData.iva}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="trasporto"
-              placeholder="Trasporto"
-              value={formData.trasporto}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="prezzoFinale"
-              placeholder="Prezzo finale"
-              value={formData.prezzoFinale}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base font-semibold"
-            />
-          </div>
         </div>
 
         {/* Personale manager */}
