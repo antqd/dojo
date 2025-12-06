@@ -442,7 +442,7 @@ export default function App() {
               )}
 
               {/* ATTIVA 3 RATE (accordion) */}
-              <button
+              {/* <button
                 type="button"
                 onClick={() => {
                   setTreRateOpen((prev) => !prev);
@@ -489,7 +489,7 @@ export default function App() {
                     Modulo di consenso
                   </Link>
                 </div>
-              )}
+              )} */}
 
               {/* LINK RAPIDI */}
               {/* <div className="mt-2 flex flex-col gap-2">
@@ -820,7 +820,7 @@ export default function App() {
             </p>
           </div>
 
-          <div className="reveal rounded-2xl bg-white/5 p-6 border border-white/10">
+          {/* <div className="reveal rounded-2xl bg-white/5 p-6 border border-white/10">
             <h3 className="text-lg font-semibold">Come funziona</h3>
             <ol className="mt-3 space-y-2 text-sm text-white/85 list-decimal list-inside">
               <li>Scegli il prodotto/servizio da proporre a rate.</li>
@@ -835,7 +835,7 @@ export default function App() {
               Tu vedi tutto in una dashboard chiara: incassi, rate, status dei
               pagamenti e statistiche di utilizzo.
             </p>
-          </div>
+          </div> */}
         </div>
       </section>
 
