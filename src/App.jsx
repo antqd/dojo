@@ -536,7 +536,7 @@ export default function App() {
               Expopay • POS Dojo • Pay Later • Servizi web
             </p> */}
             <h1 className="hero-stagger text-4xl sm:text-5xl font-semibold leading-tight text-[#0B2B23] font-serif">
-              Pagamenti, rate e web
+              Pagamenti e web
               <br />
               in un unico{" "}
               <span className="text-[#1BA97F]">partner digitale</span>
