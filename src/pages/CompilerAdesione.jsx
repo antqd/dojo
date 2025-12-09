@@ -54,6 +54,11 @@ const CompilerAdesione = () => {
     servizioCardAziendali: false,
     servizioAltro: false,
     servizioAltroDescrizione: "",
+    prezzoServizio1: "",
+    prezzoServizio2: "",
+    prezzoServizio3: "",
+    prezzoServizio4: "",
+    prezzoServizio5: "",
 
     // PERSONALE MANAGER
     personaleManagerNome: "",
@@ -162,6 +167,30 @@ const CompilerAdesione = () => {
 
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
+
+  const buildPrezziServiziText = () => {
+    const lines = [];
+    const pushLine = (label, value) => {
+      const cleanValue = (value || "").trim();
+      if (cleanValue) lines.push(`${label}: ${cleanValue}`);
+    };
+
+    pushLine("Servizio 1 - paga in 3 rate", formData.prezzoServizio1);
+    pushLine(
+      "Servizio 2 - pubblicazione Gift Card Davveroo.it",
+      formData.prezzoServizio2
+    );
+    pushLine("Servizio 3 - pos virtuale", formData.prezzoServizio3);
+    pushLine("Servizio 4 - emissione card aziendali", formData.prezzoServizio4);
+    if ((formData.prezzoServizio5 || "").trim()) {
+      const altLabel = formData.servizioAltroDescrizione?.trim()
+        ? `Servizio 5 - Altro (${formData.servizioAltroDescrizione.trim()})`
+        : "Servizio 5 - Altro";
+      pushLine(altLabel, formData.prezzoServizio5);
+    }
+
+    return lines.join("\n");
+  };
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
@@ -281,7 +310,11 @@ const CompilerAdesione = () => {
     drawTextOn(page1, formData.legaleMail, 320, 488, 10);
 
     // Descrizione servizio + servizi selezionati
-    drawMultilineTextOn(page1, formData.descrizioneServizio, 70, 275, {
+    const prezziServizi = buildPrezziServiziText();
+    const descrizioneCompleta = [formData.descrizioneServizio, prezziServizi]
+      .filter((v) => v && v.trim())
+      .join("\n\n");
+    drawMultilineTextOn(page1, descrizioneCompleta, 70, 275, {
       size: 11,
       maxWidth: 360,
       lineHeight: 13,
@@ -386,16 +419,21 @@ const CompilerAdesione = () => {
         }))
       );
 
+      const prezziServizi = buildPrezziServiziText();
+      const prezziTextForEmail = prezziServizi
+        ? `\n\nPrezzi servizi selezionati:\n${prezziServizi}`
+        : "";
+
       const payload = {
         // dati "umani"
         nome: formData.ragioneSociale?.trim() || "Senza nome",
         email: destinatario,
         telefono: formData.cellulareAzienda?.trim() || "",
         messaggio:
-          formData.note ||
-          `Modulo di adesione Davveroo - servizio: ${
-            formData.descrizioneServizio || ""
-          }`,
+          (formData.note ||
+            `Modulo di adesione Davveroo - servizio: ${
+              formData.descrizioneServizio || ""
+            }`) + prezziTextForEmail,
 
         // *** campi usati da nodemailer sul backend ***
         to: destinatario,
@@ -577,58 +615,104 @@ const CompilerAdesione = () => {
           </h3>
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-800">
-              Seleziona i servizi
+              Seleziona i servizi e inserisci il prezzo
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label className="flex items-center gap-2 text-sm sm:text-base">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
+                <label className="flex items-center gap-2 text-sm sm:text-base">
+                  <input
+                    type="checkbox"
+                    checked={formData.servizioPagaTreRate}
+                    onChange={handleCheckboxChange("servizioPagaTreRate")}
+                  />
+                  Servizio 1 - paga in 3 rate
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.servizioPagaTreRate}
-                  onChange={handleCheckboxChange("servizioPagaTreRate")}
+                  name="prezzoServizio1"
+                  placeholder="Prezzo servizio 1"
+                  value={formData.prezzoServizio1}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
-                Servizio paga in 3 rate
-              </label>
-              <label className="flex items-center gap-2 text-sm sm:text-base">
+              </div>
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
+                <label className="flex items-center gap-2 text-sm sm:text-base">
+                  <input
+                    type="checkbox"
+                    checked={formData.servizioGiftCard}
+                    onChange={handleCheckboxChange("servizioGiftCard")}
+                  />
+                  Servizio 2 - pubblicazione Gift Card Davveroo.it
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.servizioGiftCard}
-                  onChange={handleCheckboxChange("servizioGiftCard")}
+                  name="prezzoServizio2"
+                  placeholder="Prezzo servizio 2"
+                  value={formData.prezzoServizio2}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
-                Servizio pubblicazione Gift Card Davveroo.it
-              </label>
-              <label className="flex items-center gap-2 text-sm sm:text-base">
+              </div>
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
+                <label className="flex items-center gap-2 text-sm sm:text-base">
+                  <input
+                    type="checkbox"
+                    checked={formData.servizioPosVirtuale}
+                    onChange={handleCheckboxChange("servizioPosVirtuale")}
+                  />
+                  Servizio 3 - pos virtuale
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.servizioPosVirtuale}
-                  onChange={handleCheckboxChange("servizioPosVirtuale")}
+                  name="prezzoServizio3"
+                  placeholder="Prezzo servizio 3"
+                  value={formData.prezzoServizio3}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
-                Servizio pos virtuale
-              </label>
-              <label className="flex items-center gap-2 text-sm sm:text-base">
+              </div>
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
+                <label className="flex items-center gap-2 text-sm sm:text-base">
+                  <input
+                    type="checkbox"
+                    checked={formData.servizioCardAziendali}
+                    onChange={handleCheckboxChange("servizioCardAziendali")}
+                  />
+                  Servizio 4 - emissione card aziendali
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.servizioCardAziendali}
-                  onChange={handleCheckboxChange("servizioCardAziendali")}
+                  name="prezzoServizio4"
+                  placeholder="Prezzo servizio 4"
+                  value={formData.prezzoServizio4}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
-                Servizio emissione card aziendali
-              </label>
-              <div className="flex flex-col gap-2 sm:col-span-2">
+              </div>
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:col-span-2">
                 <label className="flex items-center gap-2 text-sm sm:text-base">
                   <input
                     type="checkbox"
                     checked={formData.servizioAltro}
                     onChange={handleCheckboxChange("servizioAltro")}
                   />
-                  Altro
+                  Servizio 5 - Altro
                 </label>
-                <input
-                  name="servizioAltroDescrizione"
-                  placeholder="Specifica il servizio 'Altro'"
-                  value={formData.servizioAltroDescrizione}
-                  onChange={handleChange}
-                  disabled={!formData.servizioAltro}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base disabled:bg-gray-100"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <input
+                    name="servizioAltroDescrizione"
+                    placeholder="Specifica il servizio 'Altro'"
+                    value={formData.servizioAltroDescrizione}
+                    onChange={handleChange}
+                    disabled={!formData.servizioAltro}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base disabled:bg-gray-100"
+                  />
+                  <input
+                    name="prezzoServizio5"
+                    placeholder="Prezzo servizio 5 / Altro"
+                    value={formData.prezzoServizio5}
+                    onChange={handleChange}
+                    disabled={!formData.servizioAltro}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base disabled:bg-gray-100"
+                  />
+                </div>
               </div>
             </div>
           </div>
