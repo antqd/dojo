@@ -84,7 +84,7 @@ const CompilerAdesione = () => {
   const sigCanvasClienteRef = useRef();
   const sigCanvasManagerRef = useRef();
 
-  const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
+  const API_CLIENTE = "https://api.davveroo.it/api/email/send";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -437,7 +437,7 @@ const CompilerAdesione = () => {
 
         // *** campi usati da nodemailer sul backend ***
         to: destinatario,
-        subject: `Nuovo modulo adesione Davveroo - ${
+        subject: `MODULO Consenso DOJO - ${
           formData.ragioneSociale || "Senza ragione sociale"
         }`,
 

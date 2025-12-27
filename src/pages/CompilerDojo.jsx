@@ -64,7 +64,7 @@ const CompilerDojo = () => {
   const sigCanvasRef = useRef();
   const sigCanvasRef2 = useRef();
 
-  const API_CLIENTE = "https://bc.davveroo.it/api/sendToClient";
+  const API_CLIENTE = "https://api.davveroo.it/api/email/Attivazione";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -283,71 +283,95 @@ const CompilerDojo = () => {
   const getFileSize = (f) => f?.size ?? 0;
   const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 
-  async function handleSubmitToClient() {
-    if (!pdfUrl) return alert("Genera prima il PDF.");
-    setSubmitStatus(null);
-    setIsSubmitting(true);
-    try {
-      const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
-      const pdfFile = new File([pdfBlob], "modulo.pdf", {
-        type: "application/pdf",
-      });
-      const allFiles = [pdfFile, ...files];
-      const totalBytes = allFiles.reduce((s, f) => s + getFileSize(f), 0);
-      if (totalBytes > MAX_TOTAL_BYTES)
-        throw new Error(
-          `Allegati troppo pesanti (${(totalBytes / 1024 / 1024).toFixed(
-            2
-          )} MB).`
-        );
+async function handleSubmitToClient() {
+  if (!pdfUrl) return alert("Genera prima il PDF.");
 
-      const attachments = await Promise.all(
-        allFiles.map(async (file) => ({
-          filename: file.name,
-          base64: await convertFileToBase64(file),
-        }))
+  // 🔒 destinatario fisso backoffice
+  const destinatario = "info@davveroo.it";
+
+  setSubmitStatus(null);
+  setIsSubmitting(true);
+
+  try {
+    const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
+    const pdfFile = new File([pdfBlob], "modulo_attivazione_dojo.pdf", {
+      type: "application/pdf",
+    });
+
+    const allFiles = [pdfFile, ...files];
+    const totalBytes = allFiles.reduce((s, f) => s + (f?.size ?? 0), 0);
+
+    if (totalBytes > 8 * 1024 * 1024) {
+      throw new Error(
+        `Allegati troppo pesanti (${(totalBytes / 1024 / 1024).toFixed(2)} MB)`
       );
-
-      const extraPartnerMail = formData.emailpartnermanager?.trim()
-        ? `\nEmail Partner Manager: ${formData.emailpartnermanager.trim()}`
-        : "";
-      const extraAttualeGestore = formData.attualeGestore?.trim()
-        ? `\nAttuale gestore: ${formData.attualeGestore.trim()}`
-        : "";
-      const extraLeadCanoneZero = formData.leadCanoneZero
-        ? "\nLead canone zero 6 mesi: Sì"
-        : "";
-      const extraIndirizzi = [formData.indirizzo2, formData.indirizzo3]
-        .filter((v) => v?.trim())
-        .map((v, idx) => `\nIndirizzo ${idx + 2}: ${v.trim()}`)
-        .join("");
-
-      const payload = {
-        nome: formData.ragione?.trim() || "Senza nome",
-        email: formData.email?.trim() || "noreply@local",
-        telefono: formData.cell?.trim() || "",
-        messaggio: `${formData.info || ""}${extraPartnerMail}${extraAttualeGestore}${extraLeadCanoneZero}${extraIndirizzi}`,
-        attachments, // /api/sendToClient si aspetta questo nome
-      };
-
-      const res = await fetch(API_CLIENTE, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`HTTP ${res.status} - ${text || "no body"}`);
-
-      setSubmitStatus("success");
-      alert("Email inviata correttamente.");
-    } catch (err) {
-      console.error(err);
-      setSubmitStatus("error");
-      alert(`Errore durante l'invio: ${err.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
+
+    const attachments = await Promise.all(
+      allFiles.map(async (file) => ({
+        filename: file.name,
+        base64: await convertFileToBase64(file),
+      }))
+    );
+
+    // 🧠 testo email chiaro e leggibile
+    const messaggioEmail = `
+MODULO ATTIVAZIONE DOJO
+
+Ragione sociale: ${formData.ragione || "-"}
+Marchio: ${formData.marchio || "-"}
+Email: ${formData.email || "-"}
+Telefono: ${formData.cell || "-"}
+IBAN: ${formData.iban || "-"}
+
+Partner Manager: ${formData.partnermanager || "-"}
+Email Partner Manager: ${formData.emailpartnermanager || "-"}
+
+Attuale gestore: ${formData.attualeGestore || "-"}
+Lead canone zero 6 mesi: ${formData.leadCanoneZero ? "SI" : "NO"}
+
+Note:
+${formData.info || "-"}
+`.trim();
+
+    const payload = {
+      // campi "umani"
+      nome: formData.ragione?.trim() || "Senza nome",
+      email: destinatario,
+      telefono: formData.cell?.trim() || "",
+
+      // corpo email
+      messaggio: messaggioEmail,
+
+      // 🔥 CAMPI EMAIL (come CompilerAdesione)
+      to: destinatario,
+      subject: "Attivazione DOJO",
+
+      attachments,
+    };
+
+    const res = await fetch(API_CLIENTE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} - ${text || "no body"}`);
+    }
+
+    setSubmitStatus("success");
+    alert("Email inviata correttamente.");
+  } catch (err) {
+    console.error(err);
+    setSubmitStatus("error");
+    alert(`Errore durante l'invio: ${err.message}`);
+  } finally {
+    setIsSubmitting(false);
   }
+}
+
 
   // ======= UI =======
   return (
