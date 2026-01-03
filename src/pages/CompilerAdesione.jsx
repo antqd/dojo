@@ -194,7 +194,7 @@ const CompilerAdesione = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/moduloadesionepartner1.pdf").then(
+    const existingPdfBytes = await fetch("/moduloadesionepartner.pdf").then(
       (res) => res.arrayBuffer()
     );
 
