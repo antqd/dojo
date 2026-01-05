@@ -5,12 +5,6 @@ import SignatureCanvas from "react-signature-canvas";
 
 const CompilerAdesione = () => {
   // ======= Util =======
-  const euro = (v) => {
-    const n = Number(v || 0);
-    return n.toLocaleString("it-IT", { style: "currency", currency: "EUR" });
-  };
-
-  // Sanifica caratteri non supportati da Helvetica (WinAnsi)
   const sanitizeForWinAnsi = (input) => {
     let s = String(input ?? "");
     return s
@@ -48,12 +42,14 @@ const CompilerAdesione = () => {
 
     // SERVIZIO / ECONOMICO
     descrizioneServizio: "",
+    servizioAbbonamentoAnnuale: false, // ✅ SOLO PAG 3
     servizioPagaTreRate: false,
     servizioGiftCard: false,
     servizioPosVirtuale: false,
     servizioCardAziendali: false,
     servizioAltro: false,
     servizioAltroDescrizione: "",
+    prezzoServizio0: "", // abbonamento annuale
     prezzoServizio1: "",
     prezzoServizio2: "",
     prezzoServizio3: "",
@@ -138,6 +134,7 @@ const CompilerAdesione = () => {
         enumerable: true,
       });
       setFiles((prev) => [...prev, file]);
+
       if (file.type.startsWith("image/")) {
         const r = new FileReader();
         r.onload = (ev) =>
@@ -168,6 +165,7 @@ const CompilerAdesione = () => {
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
+  // Riepilogo prezzi per EMAIL (non per pagina 1 del PDF)
   const buildPrezziServiziText = () => {
     const lines = [];
     const pushLine = (label, value) => {
@@ -175,6 +173,7 @@ const CompilerAdesione = () => {
       if (cleanValue) lines.push(`${label}: ${cleanValue}`);
     };
 
+    pushLine("Abbonamento annuale", formData.prezzoServizio0);
     pushLine("Servizio 1 - paga in 3 rate", formData.prezzoServizio1);
     pushLine(
       "Servizio 2 - pubblicazione Gift Card Davveroo.it",
@@ -200,13 +199,13 @@ const CompilerAdesione = () => {
 
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
-    // Font standard
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     const pages = pdfDoc.getPages();
     const page1 = pages[0];
     const page2 = pages[1] || pages[0];
+    const page3 = pages[2] || null;
 
     const drawTextOn = (
       page,
@@ -280,61 +279,62 @@ const CompilerAdesione = () => {
       return cursorY;
     };
 
-    // === COMPILAZIONE PAGINA 1 ===
+    const drawPrezzoIfAny = (page, prezzo, x, y) => {
+      const val = String(prezzo || "").trim();
+      if (!val) return;
+      drawTextOn(page, val, x, y, 12, fontBold);
+    };
+
+    // === PAGINA 1 ===
 
     // Dati azienda (colonna sinistra)
-    drawTextOn(page1, formData.ragioneSociale, 155, 725, 11);
-    drawTextOn(page1, formData.partitaIva, 125, 705, 11);
-    drawTextOn(page1, formData.codiceSdi, 122, 683, 11);
-    drawTextOn(page1, formData.sedeCommerciale, 165, 665, 11);
-    drawTextOn(page1, formData.citta, 95, 645, 11);
-    drawTextOn(page1, formData.cellulareAzienda, 120, 625, 11);
-    drawTextOn(page1, formData.settoreMerceologico, 200, 605, 11);
+    drawTextOn(page1, formData.ragioneSociale, 160, 740, 11);
+    drawTextOn(page1, formData.partitaIva, 133, 721, 11);
+    drawTextOn(page1, formData.codiceSdi, 122, 698, 11);
+    drawTextOn(page1, formData.sedeCommerciale, 170, 680, 11);
+    drawTextOn(page1, formData.citta, 105, 660, 11);
+    drawTextOn(page1, formData.cellulareAzienda, 120, 645, 11);
+    drawTextOn(page1, formData.settoreMerceologico, 200, 625, 11);
 
     // Dati azienda (colonna destra)
     drawTextOn(page1, formData.codiceFiscaleAzienda, 370, 707, 11);
     drawTextOn(page1, formData.pec, 290, 683, 11);
     drawTextOn(page1, formData.provincia, 470, 645, 11);
-    drawTextOn(page1, formData.mailAzienda, 300, 629, 11);
-    drawTextOn(page1, formData.iban, 390, 605, 11);
+    drawTextOn(page1, formData.mailAzienda, 290, 607, 11);
+    drawTextOn(page1, formData.iban, 290, 590, 11);
 
     // Legale rappresentante
-    drawTextOn(page1, formData.legaleNomeCognome, 152, 526, 11);
-    drawTextOn(page1, formData.legaleCodiceFiscale, 410, 525, 11);
-    drawMultilineTextOn(page1, formData.legaleIndirizzo, 170, 507, {
+    drawTextOn(page1, formData.legaleNomeCognome, 152, 530, 11);
+    drawTextOn(page1, formData.legaleCodiceFiscale, 310, 530, 11);
+    drawMultilineTextOn(page1, formData.legaleIndirizzo, 170, 511, {
       size: 11,
       maxWidth: 260,
       lineHeight: 13,
     });
-    drawTextOn(page1, formData.legaleCellulare, 110, 485, 10);
+    drawTextOn(page1, formData.legaleCellulare, 110, 492, 10);
     drawTextOn(page1, formData.legaleMail, 320, 488, 10);
 
-    // Descrizione servizio + servizi selezionati
-    const prezziServizi = buildPrezziServiziText();
-    const descrizioneCompleta = [formData.descrizioneServizio, prezziServizi]
-      .filter((v) => v && v.trim())
-      .join("\n\n");
-    drawMultilineTextOn(page1, descrizioneCompleta, 70, 275, {
+    // ✅ DESCRIZIONE SERVIZIO: SOLO TESTO (NO PREZZI) in pagina 1
+    drawMultilineTextOn(page1, formData.descrizioneServizio, 70, 275, {
       size: 11,
       maxWidth: 360,
       lineHeight: 13,
     });
 
-    // Checkboxes sul template
-    const checkboxMap = [
+    // ✅ Checkboxes pagina 1 (NO abbonamento annuale)
+    const checkboxMapPage1 = [
       { field: "servizioPagaTreRate", x: 38, y: 418 },
       { field: "servizioGiftCard", x: 38, y: 392 },
       { field: "servizioPosVirtuale", x: 38, y: 368 },
-      { field: "servizioCardAziendali", x: 38, y: 342  },
+      { field: "servizioCardAziendali", x: 38, y: 342 },
       { field: "servizioAltro", x: 38, y: 315 },
     ];
-    checkboxMap.forEach(({ field, x, y }) => {
-      if (formData[field]) {
-        drawTextOn(page1, "X", x, y, 12, fontBold);
-      }
+
+    checkboxMapPage1.forEach(({ field, x, y }) => {
+      if (formData[field] === true) drawTextOn(page1, "X", x, y, 12, fontBold);
     });
 
-    // Personale manager (in basso a sinistra)
+    // Personale manager
     drawTextOn(page1, formData.personaleManagerNome, 140, 220, 9);
     drawTextOn(page1, formData.personaleManagerMail, 100, 205, 9);
     drawTextOn(page1, formData.personaleManagerCell, 110, 187, 9);
@@ -346,7 +346,7 @@ const CompilerAdesione = () => {
       lineHeight: 13,
     });
 
-    // Firma Partner Manager (opzionale) – prima pagina
+    // Firma Partner Manager (opzionale) – pagina 1
     const firmaManager = getFirmaManagerImage();
     if (firmaManager) {
       const bytes = await fetch(firmaManager).then((r) => r.arrayBuffer());
@@ -354,7 +354,7 @@ const CompilerAdesione = () => {
       page1.drawImage(png, { x: 340, y: 150, width: 160, height: 45 });
     }
 
-    // === COMPILAZIONE PAGINA 2 (data + firma cliente) ===
+    // === PAGINA 2 (data + firma cliente) ===
     if (page2) {
       if (formData.dataContratto) {
         drawTextOn(page2, formData.dataContratto, 84, 120, 11);
@@ -365,6 +365,92 @@ const CompilerAdesione = () => {
         const bytes = await fetch(firmaCliente).then((r) => r.arrayBuffer());
         const png = await pdfDoc.embedPng(bytes);
         page2.drawImage(png, { x: 380, y: 120, width: 180, height: 45 });
+      }
+    }
+
+    // === PAGINA 3 (X + prezzi SOLO QUI) ===
+    if (page3) {
+      // mappa: checkbox + coordinata prezzo riga
+      const page3ServiceMap = [
+        {
+          field: "servizioAbbonamentoAnnuale",
+          prezzoField: "prezzoServizio0",
+          xCheck: 62,
+          yCheck: 713,
+          xPrice: 145,
+          yPrice: 693,
+        },
+        {
+          field: "servizioGiftCard",
+          prezzoField: "prezzoServizio2",
+          xCheck: 62,
+          yCheck: 640,
+          xPrice: 145,
+          yPrice: 609,
+        },
+        {
+          field: "servizioPagaTreRate",
+          prezzoField: "prezzoServizio1",
+          xCheck: 62,
+          yCheck: 550,
+
+        },
+        {
+          field: "servizioPosVirtuale",
+          prezzoField: "prezzoServizio3",
+          xCheck: 62,
+          yCheck: 488,
+
+        },
+        {
+          field: "servizioCardAziendali",
+          prezzoField: "prezzoServizio4",
+          xCheck: 62,
+          yCheck: 420,
+          xPrice: 145,
+          yPrice: 305,
+        },
+        {
+          field: "servizioAltro",
+          prezzoField: "prezzoServizio5",
+          xCheck: 62,
+          yCheck: 240,
+          xPrice: 145,
+          yPrice: 195,
+        },
+      ];
+
+      // ✅ IMPORTANTISSIMO:
+      // - X: SOLO se checkbox true
+      // - Prezzo: SOLO se c’è prezzo (ma NON mette X)
+      page3ServiceMap.forEach(
+        ({ field, prezzoField, xCheck, yCheck, xPrice, yPrice }) => {
+          const isChecked = formData[field] === true;
+          const prezzo = formData[prezzoField];
+
+          if (isChecked) {
+            drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
+          }
+
+          if (String(prezzo || "").trim()) {
+            drawPrezzoIfAny(page3, prezzo, xPrice, yPrice);
+          }
+        }
+      );
+
+      // opzionale: descrizione "Altro" in pagina 3 (solo testo, no X)
+      if (
+        formData.servizioAltro === true &&
+        String(formData.servizioAltroDescrizione || "").trim()
+      ) {
+        drawTextOn(
+          page3,
+          `(${formData.servizioAltroDescrizione.trim()})`,
+          135,
+          233,
+          10,
+          font
+        );
       }
     }
 
@@ -385,7 +471,6 @@ const CompilerAdesione = () => {
   async function handleSubmitToClient() {
     if (!pdfUrl) return alert("Genera prima il PDF.");
 
-    // ---- VALIDAZIONE DESTINATARIO (per evitare No recipients defined) ----
     const destinatario =
       formData.personaleManagerMail?.trim() || formData.mailAzienda?.trim();
     if (!destinatario) {
@@ -394,7 +479,6 @@ const CompilerAdesione = () => {
       );
       return;
     }
-    // ---------------------------------------------------------------------
 
     setSubmitStatus(null);
     setIsSubmitting(true);
@@ -425,7 +509,6 @@ const CompilerAdesione = () => {
         : "";
 
       const payload = {
-        // dati "umani"
         nome: formData.ragioneSociale?.trim() || "Senza nome",
         email: destinatario,
         telefono: formData.cellulareAzienda?.trim() || "",
@@ -434,14 +517,11 @@ const CompilerAdesione = () => {
             `Modulo di adesione Davveroo - servizio: ${
               formData.descrizioneServizio || ""
             }`) + prezziTextForEmail,
-
-        // *** campi usati da nodemailer sul backend ***
         to: destinatario,
         subject: `MODULO Consenso DOJO - ${
           formData.ragioneSociale || "Senza ragione sociale"
         }`,
-
-        attachments, // /api/sendToClient si aspetta questo nome
+        attachments,
       };
 
       const res = await fetch(API_CLIENTE, {
@@ -613,11 +693,34 @@ const CompilerAdesione = () => {
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
             Descrizione servizio e condizioni economiche
           </h3>
+
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-800">
               Seleziona i servizi e inserisci il prezzo
             </p>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Abbonamento annuale */}
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm sm:text-base">
+                  <input
+                    type="checkbox"
+                    checked={formData.servizioAbbonamentoAnnuale}
+                    onChange={handleCheckboxChange(
+                      "servizioAbbonamentoAnnuale"
+                    )}
+                  />
+                  Abbonamento annuale
+                </label>
+                <input
+                  name="prezzoServizio0"
+                  placeholder="Prezzo abbonamento annuale"
+                  value={formData.prezzoServizio0}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                />
+              </div>
+
               <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
                 <label className="flex items-center gap-2 text-sm sm:text-base">
                   <input
@@ -635,6 +738,7 @@ const CompilerAdesione = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
               </div>
+
               <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
                 <label className="flex items-center gap-2 text-sm sm:text-base">
                   <input
@@ -652,6 +756,7 @@ const CompilerAdesione = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
               </div>
+
               <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
                 <label className="flex items-center gap-2 text-sm sm:text-base">
                   <input
@@ -669,6 +774,7 @@ const CompilerAdesione = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
               </div>
+
               <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
                 <label className="flex items-center gap-2 text-sm sm:text-base">
                   <input
@@ -686,6 +792,7 @@ const CompilerAdesione = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 />
               </div>
+
               <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:col-span-2">
                 <label className="flex items-center gap-2 text-sm sm:text-base">
                   <input
@@ -716,61 +823,11 @@ const CompilerAdesione = () => {
               </div>
             </div>
           </div>
+
           <textarea
             name="descrizioneServizio"
             placeholder="Descrizione servizio (verrà inserita nell'area 'DESCRIZIONE SERVIZIO' del modulo)"
             value={formData.descrizioneServizio}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
-          />
-        </div>
-
-        {/* Personale manager */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Personale / Partner Manager ExpoPay
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <input
-              name="personaleManagerNome"
-              placeholder="Nome e cognome"
-              value={formData.personaleManagerNome}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="personaleManagerMail"
-              placeholder="Mail"
-              value={formData.personaleManagerMail}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="personaleManagerCell"
-              placeholder="Cellulare"
-              value={formData.personaleManagerCell}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-        </div>
-
-        {/* Note e data contratto */}
-        <div className="space-y-3">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Note e data contratto
-          </h3>
-          <input
-            name="dataContratto"
-            placeholder="Data (es. 18/11/2025)"
-            value={formData.dataContratto}
-            onChange={handleChange}
-            className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-          />
-          <textarea
-            name="note"
-            placeholder="Note"
-            value={formData.note}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
@@ -934,33 +991,6 @@ const CompilerAdesione = () => {
               </div>
             </div>
           </div>
-
-          {/* Riepilogo file */}
-          {files.length > 0 && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Riepilogo documenti caricati ({files.length})
-              </h3>
-              <div className="space-y-2">
-                {files.map((file, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center bg-white p-3 rounded border"
-                  >
-                    <div>
-                      <span className="font-medium">{file.name}</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        ({file.section})
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Firme */}
@@ -1009,8 +1039,6 @@ const CompilerAdesione = () => {
               </button>
             )}
           </div>
-
-          {/* Firma Partner Manager */}
         </div>
 
         {/* Pulsanti */}
