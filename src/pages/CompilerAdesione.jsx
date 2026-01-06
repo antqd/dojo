@@ -56,7 +56,12 @@ const CompilerAdesione = () => {
     prezzoServizio4: "",
     prezzoServizio5: "",
 
-    // PERSONALE MANAGER
+    // ✅ AGENTE (NUOVO)
+    agenteNomeCognome: "",
+    agenteMail: "",
+    agenteCellulare: "",
+
+    // (mantengo anche i vecchi per compatibilità)
     personaleManagerNome: "",
     personaleManagerMail: "",
     personaleManagerCell: "",
@@ -181,6 +186,7 @@ const CompilerAdesione = () => {
     );
     pushLine("Servizio 3 - pos virtuale", formData.prezzoServizio3);
     pushLine("Servizio 4 - emissione card aziendali", formData.prezzoServizio4);
+
     if ((formData.prezzoServizio5 || "").trim()) {
       const altLabel = formData.servizioAltroDescrizione?.trim()
         ? `Servizio 5 - Altro (${formData.servizioAltroDescrizione.trim()})`
@@ -329,15 +335,24 @@ const CompilerAdesione = () => {
       { field: "servizioCardAziendali", x: 38, y: 342 },
       { field: "servizioAltro", x: 38, y: 315 },
     ];
-
     checkboxMapPage1.forEach(({ field, x, y }) => {
       if (formData[field] === true) drawTextOn(page1, "X", x, y, 12, fontBold);
     });
 
-    // Personale manager
-    drawTextOn(page1, formData.personaleManagerNome, 140, 220, 9);
-    drawTextOn(page1, formData.personaleManagerMail, 100, 205, 9);
-    drawTextOn(page1, formData.personaleManagerCell, 110, 187, 9);
+    // ✅ AGENTE (stessa area “personale manager” che avevi)
+    // Se compilato agente -> usa agente, altrimenti fallback ai vecchi personaleManager*
+    const agenteNome =
+      formData.agenteNomeCognome?.trim() ||
+      formData.personaleManagerNome?.trim();
+    const agenteMail =
+      formData.agenteMail?.trim() || formData.personaleManagerMail?.trim();
+    const agenteCell =
+      formData.agenteCellulare?.trim() || formData.personaleManagerCell?.trim();
+
+    // Coordinate: sono quelle che avevi già in basso (le ho mantenute)
+    drawTextOn(page1, agenteNome, 140, 220, 9);
+    drawTextOn(page1, agenteMail, 100, 205, 9);
+    drawTextOn(page1, agenteCell, 110, 187, 9);
 
     // Note
     drawMultilineTextOn(page1, formData.note, 40, 110, {
@@ -370,7 +385,6 @@ const CompilerAdesione = () => {
 
     // === PAGINA 3 (X + prezzi SOLO QUI) ===
     if (page3) {
-      // mappa: checkbox + coordinata prezzo riga
       const page3ServiceMap = [
         {
           field: "servizioAbbonamentoAnnuale",
@@ -393,14 +407,16 @@ const CompilerAdesione = () => {
           prezzoField: "prezzoServizio1",
           xCheck: 62,
           yCheck: 550,
-
+          xPrice: 145,
+          yPrice: 520,
         },
         {
           field: "servizioPosVirtuale",
           prezzoField: "prezzoServizio3",
           xCheck: 62,
           yCheck: 488,
-
+          xPrice: 145,
+          yPrice: 430,
         },
         {
           field: "servizioCardAziendali",
@@ -420,25 +436,17 @@ const CompilerAdesione = () => {
         },
       ];
 
-      // ✅ IMPORTANTISSIMO:
-      // - X: SOLO se checkbox true
-      // - Prezzo: SOLO se c’è prezzo (ma NON mette X)
       page3ServiceMap.forEach(
         ({ field, prezzoField, xCheck, yCheck, xPrice, yPrice }) => {
           const isChecked = formData[field] === true;
           const prezzo = formData[prezzoField];
 
-          if (isChecked) {
-            drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
-          }
-
-          if (String(prezzo || "").trim()) {
+          if (isChecked) drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
+          if (String(prezzo || "").trim())
             drawPrezzoIfAny(page3, prezzo, xPrice, yPrice);
-          }
         }
       );
 
-      // opzionale: descrizione "Altro" in pagina 3 (solo testo, no X)
       if (
         formData.servizioAltro === true &&
         String(formData.servizioAltroDescrizione || "").trim()
@@ -454,7 +462,6 @@ const CompilerAdesione = () => {
       }
     }
 
-    // Salva e mostra anteprima
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
@@ -472,10 +479,13 @@ const CompilerAdesione = () => {
     if (!pdfUrl) return alert("Genera prima il PDF.");
 
     const destinatario =
-      formData.personaleManagerMail?.trim() || formData.mailAzienda?.trim();
+      formData.agenteMail?.trim() ||
+      formData.personaleManagerMail?.trim() ||
+      formData.mailAzienda?.trim();
+
     if (!destinatario) {
       alert(
-        "Inserisci almeno una mail destinataria (mail azienda o mail Partner Manager) prima di inviare."
+        "Inserisci almeno una mail destinataria (mail azienda o mail AGENTE) prima di inviare."
       );
       return;
     }
@@ -487,6 +497,7 @@ const CompilerAdesione = () => {
       const pdfFile = new File([pdfBlob], "modulo_adesione_expopay.pdf", {
         type: "application/pdf",
       });
+
       const allFiles = [pdfFile, ...files];
       const totalBytes = allFiles.reduce((s, f) => s + getFileSize(f), 0);
       if (totalBytes > MAX_TOTAL_BYTES)
@@ -833,6 +844,57 @@ const CompilerAdesione = () => {
           />
         </div>
 
+        {/* ✅ AGENTE (NUOVA SEZIONE UI) */}
+        <div className="space-y-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Agente
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <input
+              name="agenteNomeCognome"
+              placeholder="Nome e cognome"
+              value={formData.agenteNomeCognome}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="agenteMail"
+              placeholder="Mail"
+              value={formData.agenteMail}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="agenteCellulare"
+              placeholder="Cellulare"
+              value={formData.agenteCellulare}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+          </div>
+        </div>
+
+        {/* Note e data contratto */}
+        <div className="space-y-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Note e data contratto
+          </h3>
+          <input
+            name="dataContratto"
+            placeholder="Data (es. 18/11/2025)"
+            value={formData.dataContratto}
+            onChange={handleChange}
+            className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          />
+          <textarea
+            name="note"
+            placeholder="Note"
+            value={formData.note}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
+          />
+        </div>
+
         {/* Upload documenti */}
         <div className="space-y-6">
           <h2 className="text-xl sm:text-2xl font-bold text-blue-900 text-center">
@@ -995,7 +1057,6 @@ const CompilerAdesione = () => {
 
         {/* Firme */}
         <div className="bg-gray-50 p-4 rounded-lg space-y-6">
-          {/* Firma Cliente */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <p className="text-blue-900 font-semibold">Firma Cliente</p>
@@ -1010,6 +1071,7 @@ const CompilerAdesione = () => {
                 {isSignatureClienteActive ? "Disattiva firma" : "Attiva firma"}
               </button>
             </div>
+
             {isSignatureClienteActive ? (
               <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
                 <SignatureCanvas
@@ -1029,6 +1091,7 @@ const CompilerAdesione = () => {
                 </p>
               </div>
             )}
+
             {isSignatureClienteActive && (
               <button
                 onClick={clearFirmaCliente}
