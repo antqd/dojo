@@ -385,6 +385,19 @@ const CompilerAdesione = () => {
 
     // === PAGINA 3 (X + prezzi SOLO QUI) ===
     if (page3) {
+      if (formData.dataContratto) {
+        drawTextOn(page3, formData.dataContratto, 84, 120, 11);
+      }
+
+      const firmaClientePage3 = getFirmaClienteImage();
+      if (firmaClientePage3) {
+        const bytes = await fetch(firmaClientePage3).then((r) =>
+          r.arrayBuffer()
+        );
+        const png = await pdfDoc.embedPng(bytes);
+        page3.drawImage(png, { x: 380, y: 120, width: 180, height: 45 });
+      }
+
       const page3ServiceMap = [
         {
           field: "servizioAbbonamentoAnnuale",
