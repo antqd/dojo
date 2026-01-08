@@ -303,11 +303,11 @@ const CompilerAdesione = () => {
     drawTextOn(page1, formData.settoreMerceologico, 200, 625, 11);
 
     // Dati azienda (colonna destra)
-    drawTextOn(page1, formData.codiceFiscaleAzienda, 370, 707, 11);
-    drawTextOn(page1, formData.pec, 290, 683, 11);
-    drawTextOn(page1, formData.provincia, 470, 645, 11);
-    drawTextOn(page1, formData.mailAzienda, 290, 607, 11);
-    drawTextOn(page1, formData.iban, 290, 590, 11);
+    drawTextOn(page1, formData.codiceFiscaleAzienda, 360, 727, 11);
+    drawTextOn(page1, formData.pec, 360, 703, 11);
+    drawTextOn(page1, formData.provincia, 365, 650, 11);
+    drawTextOn(page1, formData.mailAzienda, 105, 607, 11);
+    drawTextOn(page1, formData.iban, 105, 590, 11);
 
     // Legale rappresentante
     drawTextOn(page1, formData.legaleNomeCognome, 152, 530, 11);
