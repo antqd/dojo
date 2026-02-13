@@ -86,7 +86,7 @@ const CompilerAdesione = () => {
   const sigCanvasClienteRef = useRef();
   const sigCanvasManagerRef = useRef();
 
-  const API_CLIENTE = "https://api.davveroo.it/api/email/Attivazione";
+  const API_CLIENTE = "https://api.davveroo.it/api/email/attivazione";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -535,13 +535,9 @@ const CompilerAdesione = () => {
 
       const payload = {
         nome: formData.ragioneSociale?.trim() || "Senza nome",
-        email: destinatario,
+        email: formData.mailAzienda?.trim() || "",
         telefono: formData.cellulareAzienda?.trim() || "",
-        email_pmanager:
-          formData.email_pmanager?.trim() ||
-          formData.agenteMail?.trim() ||
-          formData.personaleManagerMail?.trim() ||
-          "",
+        email_pmanager: formData.email_pmanager?.trim() || "",
         messaggio:
           (formData.note ||
             `Modulo di adesione Davveroo - servizio: ${

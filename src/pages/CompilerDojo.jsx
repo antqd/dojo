@@ -24,7 +24,6 @@ const CompilerDojo = () => {
   // ======= Stato form e allegati =======
   const [formData, setFormData] = useState({
     partnermanager: "",
-    emailpartnermanager: "",
     email_pmanager: "",
     attualeGestore: "",
     leadCanoneZero: false,
@@ -65,7 +64,7 @@ const CompilerDojo = () => {
   const sigCanvasRef = useRef();
   const sigCanvasRef2 = useRef();
 
-  const API_CLIENTE = "https://api.davveroo.it/api/email/Attivazione";
+  const API_CLIENTE = "https://api.davveroo.it/api/email/attivazione";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -211,7 +210,7 @@ const CompilerDojo = () => {
     // ========= COMPILAZIONE PDF =========
     // campi esistenti
     drawText(formData.partnermanager, 470, 1323, 21);
-    drawText(formData.emailpartnermanager, 470, 1290, 18);
+    drawText(formData.email_pmanager, 470, 1290, 18);
     drawText(formData.ragione, 310, 1170, 20);
     drawText(formData.attualeGestore, 100, 880, 18);
     drawText(formData.cell, 130, 1125, 20);
@@ -326,7 +325,7 @@ Telefono: ${formData.cell || "-"}
 IBAN: ${formData.iban || "-"}
 
 Partner Manager: ${formData.partnermanager || "-"}
-Email Partner Manager: ${formData.emailpartnermanager || "-"}
+Email Partner Manager: ${formData.email_pmanager || "-"}
 
 Attuale gestore: ${formData.attualeGestore || "-"}
 Lead canone zero 6 mesi: ${formData.leadCanoneZero ? "SI" : "NO"}
@@ -338,12 +337,9 @@ ${formData.info || "-"}
     const payload = {
       // campi "umani"
       nome: formData.ragione?.trim() || "Senza nome",
-      email: destinatario,
+      email: formData.email?.trim() || "",
       telefono: formData.cell?.trim() || "",
-      email_pmanager:
-        formData.email_pmanager?.trim() ||
-        formData.emailpartnermanager?.trim() ||
-        "",
+      email_pmanager: formData.email_pmanager?.trim() || "",
 
       // corpo email
       messaggio: messaggioEmail,
@@ -438,15 +434,8 @@ ${formData.info || "-"}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
           <input
-            name="emailpartnermanager"
-            placeholder="Email Partner Manager"
-            value={formData.emailpartnermanager}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
             name="email_pmanager"
-            placeholder="Email P. Manager (endpoint)"
+            placeholder="Email Partner Manager"
             value={formData.email_pmanager}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
