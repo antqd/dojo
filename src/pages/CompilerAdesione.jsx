@@ -60,6 +60,7 @@ const CompilerAdesione = () => {
     agenteNomeCognome: "",
     agenteMail: "",
     agenteCellulare: "",
+    email_pmanager: "",
 
     // (mantengo anche i vecchi per compatibilità)
     personaleManagerNome: "",
@@ -85,7 +86,7 @@ const CompilerAdesione = () => {
   const sigCanvasClienteRef = useRef();
   const sigCanvasManagerRef = useRef();
 
-  const API_CLIENTE = "https://api.davveroo.it/api/email/send";
+  const API_CLIENTE = "https://api.davveroo.it/api/email/Attivazione";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -536,15 +537,18 @@ const CompilerAdesione = () => {
         nome: formData.ragioneSociale?.trim() || "Senza nome",
         email: destinatario,
         telefono: formData.cellulareAzienda?.trim() || "",
+        email_pmanager:
+          formData.email_pmanager?.trim() ||
+          formData.agenteMail?.trim() ||
+          formData.personaleManagerMail?.trim() ||
+          "",
         messaggio:
           (formData.note ||
             `Modulo di adesione Davveroo - servizio: ${
               formData.descrizioneServizio || ""
             }`) + prezziTextForEmail,
         to: destinatario,
-        subject: `MODULO Consenso DOJO - ${
-          formData.ragioneSociale || "Senza ragione sociale"
-        }`,
+        subject: "Attivazione DOJO",
         attachments,
       };
 
@@ -881,6 +885,13 @@ const CompilerAdesione = () => {
               name="agenteCellulare"
               placeholder="Cellulare"
               value={formData.agenteCellulare}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="email_pmanager"
+              placeholder="Email P. Manager (endpoint)"
+              value={formData.email_pmanager}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />

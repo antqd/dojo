@@ -25,6 +25,7 @@ const CompilerDojo = () => {
   const [formData, setFormData] = useState({
     partnermanager: "",
     emailpartnermanager: "",
+    email_pmanager: "",
     attualeGestore: "",
     leadCanoneZero: false,
     email: "",
@@ -339,6 +340,10 @@ ${formData.info || "-"}
       nome: formData.ragione?.trim() || "Senza nome",
       email: destinatario,
       telefono: formData.cell?.trim() || "",
+      email_pmanager:
+        formData.email_pmanager?.trim() ||
+        formData.emailpartnermanager?.trim() ||
+        "",
 
       // corpo email
       messaggio: messaggioEmail,
@@ -436,6 +441,13 @@ ${formData.info || "-"}
             name="emailpartnermanager"
             placeholder="Email Partner Manager"
             value={formData.emailpartnermanager}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          />
+          <input
+            name="email_pmanager"
+            placeholder="Email P. Manager (endpoint)"
+            value={formData.email_pmanager}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
