@@ -37,9 +37,20 @@ const convertFileToBase64 = (file) =>
   });
 
 export default function ComparazioneEstrattoAI() {
+  const emptySchema = {
+    debit: "-",
+    credit: "-",
+    commercial: "-",
+    amex: "-",
+    mediaFinale: "-",
+    risparmioMensile: "-",
+    risparmioAnnuale: "-",
+  };
+
   const [statementFile, setStatementFile] = useState(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState("");
+  const [editableSchema, setEditableSchema] = useState(emptySchema);
   const [aiError, setAiError] = useState("");
   const [recipientInput, setRecipientInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -52,15 +63,7 @@ export default function ComparazioneEstrattoAI() {
       .map((line) => line.trim())
       .filter(Boolean);
 
-    const result = {
-      debit: "-",
-      credit: "-",
-      commercial: "-",
-      amex: "-",
-      mediaFinale: "-",
-      risparmioMensile: "-",
-      risparmioAnnuale: "-",
-    };
+    const result = { ...emptySchema };
 
     lines.forEach((line) => {
       const separatorIndex = line.indexOf(":");
@@ -78,7 +81,25 @@ export default function ComparazioneEstrattoAI() {
     return result;
   };
 
-  const parsedSchema = parseSchema(aiResult);
+  const schemaToReportText = (schema = {}) => {
+    return [
+      `Debit: ${schema.debit || "-"}`,
+      `Credit: ${schema.credit || "-"}`,
+      `Commercial: ${schema.commercial || "-"}`,
+      `Amex: ${schema.amex || "-"}`,
+      "",
+      `Media finale stimata: ${schema.mediaFinale || "-"}`,
+      `Risparmio mensile stimato: ${schema.risparmioMensile || "-"}`,
+      `Risparmio annuale stimato: ${schema.risparmioAnnuale || "-"}`,
+    ].join("\n");
+  };
+
+  const handleEditableFieldChange = (key, value) => {
+    setEditableSchema((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
   const parseRecipients = (input) =>
     [...new Set(
@@ -115,7 +136,9 @@ export default function ComparazioneEstrattoAI() {
         throw new Error(data?.error || "Errore durante analisi AI.");
       }
 
-      setAiResult(data?.result || "Nessun risultato ricevuto.");
+      const nextResult = data?.result || "Nessun risultato ricevuto.";
+      setAiResult(nextResult);
+      setEditableSchema(parseSchema(nextResult));
       setSendStatus(null);
       setSendError("");
     } catch (error) {
@@ -148,8 +171,8 @@ export default function ComparazioneEstrattoAI() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipients,
-          report_text: aiResult,
-          schema: parsedSchema,
+          report_text: schemaToReportText(editableSchema),
+          schema: editableSchema,
         }),
       });
 
@@ -238,12 +261,17 @@ export default function ComparazioneEstrattoAI() {
                       key={field.key}
                       className="bg-white border border-indigo-100 rounded p-3"
                     >
-                      <p className="text-xs text-indigo-700 font-semibold uppercase tracking-wide">
+                      <p className="text-xs text-indigo-700 font-semibold tracking-wide">
                         {field.label}
                       </p>
-                      <p className="text-base text-indigo-950 font-medium mt-1">
-                        {parsedSchema[field.key] || "-"}
-                      </p>
+                      <input
+                        type="text"
+                        value={editableSchema[field.key] || ""}
+                        onChange={(e) =>
+                          handleEditableFieldChange(field.key, e.target.value)
+                        }
+                        className="mt-1 w-full rounded border border-indigo-200 px-3 py-2 text-base text-indigo-950 focus:ring-2 focus:ring-indigo-500"
+                      />
                     </div>
                   ))}
                 </div>
