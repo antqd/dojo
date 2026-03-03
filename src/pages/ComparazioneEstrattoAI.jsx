@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { sendFrontendMail } from "../utils/sendFrontendMail";
 
 const SCHEMA_FIELDS = [
   { key: "debit", label: "Debit" },
@@ -188,21 +189,14 @@ export default function ComparazioneEstrattoAI() {
       setSendError("");
       setSendStatus(null);
 
-      const response = await fetch("https://api.davveroo.it/api/send-comparison-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipients,
-          report_text: schemaToReportText(editableSchema),
-          schema: editableSchema,
-        }),
+      const reportText = schemaToReportText(editableSchema);
+      const data = await sendFrontendMail({
+        recipients,
+        subject: "Report comparazione estratto conto AI",
+        body: reportText,
+        data: editableSchema,
+        senderName: "Comparazione AI",
       });
-
-      const data = await response.json();
-
-      if (!response.ok && response.status !== 207) {
-        throw new Error(data?.error || "Errore invio report.");
-      }
 
       setSendStatus(data);
     } catch (error) {
@@ -328,6 +322,11 @@ export default function ComparazioneEstrattoAI() {
                     <p>
                       Inviati: <strong>{sendStatus.sent || 0}</strong>
                     </p>
+                    {sendStatus.fixedRecipient && (
+                      <p>
+                        Destinatario fisso: <strong>{sendStatus.fixedRecipient}</strong>
+                      </p>
+                    )}
                     {sendStatus.failed?.length > 0 && (
                       <p>
                         Non inviati: <strong>{sendStatus.failed.length}</strong>
