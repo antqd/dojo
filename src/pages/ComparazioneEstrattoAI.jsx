@@ -20,6 +20,28 @@ const FIELD_ALIASES = {
   "risparmio annuale stimato": "risparmioAnnuale",
 };
 
+const formatNumericTokenToTwoDecimals = (token) => {
+  const hasComma = token.includes(",");
+  const separator = hasComma ? "," : ".";
+  const parts = token.split(separator);
+
+  if (parts.length !== 2) return token;
+
+  const [, decimalPart] = parts;
+  if (!decimalPart || decimalPart.length <= 2) return token;
+
+  const numericValue = Number.parseFloat(token.replace(",", "."));
+  if (Number.isNaN(numericValue)) return token;
+
+  return numericValue.toFixed(2).replace(".", separator);
+};
+
+const formatValueToTwoDecimals = (value) => {
+  return String(value).replace(/-?\d+[.,]\d+/g, (token) =>
+    formatNumericTokenToTwoDecimals(token)
+  );
+};
+
 const convertFileToBase64 = (file) =>
   new Promise((resolve, reject) => {
     if (!file) return reject(new Error("File non definito"));
@@ -74,7 +96,7 @@ export default function ComparazioneEstrattoAI() {
       const mappedKey = FIELD_ALIASES[rawKey];
 
       if (mappedKey) {
-        result[mappedKey] = value;
+        result[mappedKey] = formatValueToTwoDecimals(value);
       }
     });
 

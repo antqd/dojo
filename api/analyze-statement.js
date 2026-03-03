@@ -53,6 +53,8 @@ Nuova media:
 Risparmio mensile:
 Risparmio annuale:
 
+Formatta i numeri con massimo 2 cifre decimali (esempio: 0,65).
+
 Non inserire spiegazioni, solo numeri e risultati.`;
 
 function jsonResponse(status, body) {
