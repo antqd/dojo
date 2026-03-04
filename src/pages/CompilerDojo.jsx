@@ -26,7 +26,6 @@ const CompilerDojo = () => {
     partnermanager: "",
     email_pmanager: "",
     attualeGestore: "",
-    leadCanoneZero: false,
     email: "",
     iban: "",
     cell: "",
@@ -37,19 +36,18 @@ const CompilerDojo = () => {
     debito: "",
     credito: "",
     business: "",
-    offdebito: "",
-    offcredito: "",
-    offbusiness: "",
     marchio: "",
     info: "",
-
-    // NUOVI CAMPI
-    canone: "",
     canonedojo: "",
-    transatoCredito: "",
-    transatoDebito: "",
     scontrinoMedio: "",
     scontrinoMassimo: "",
+    // NUOVE CARTE
+    amex: "",
+    stf: "",
+    // RANGE VOLUME
+    volume0_50k: false,
+    volume50_150k: false,
+    volume150_250k: false,
   });
 
   const [files, setFiles] = useState([]);
@@ -231,27 +229,25 @@ const CompilerDojo = () => {
       maxWidth: 300,
       lineHeight: 18,
     });
-    drawText(formData.debito, 230, 813, 19);
-    drawText(formData.offdebito, 575, 813, 19);
-    drawText(formData.credito, 230, 850, 19);
-    drawText(formData.offcredito, 575, 850, 19);
-    drawText(formData.business, 230, 770, 19);
-    drawText(formData.offbusiness, 575, 770, 19);
+    drawText(formData.debito, 600, 690, 19);
+    drawText(formData.credito, 600, 730, 19);
+    drawText(formData.business, 600, 650, 19);
+    drawText(formData.amex, 600, 610, 18);
+    drawText(formData.stf, 520, 573, 18);
+    if (formData.volume0_50k) drawText("X", 55, 767, 19);
+    if (formData.volume50_150k) drawText("X", 55, 688, 19);
+    if (formData.volume150_250k) drawText("X", 55, 605, 19);
     drawText(formData.marchio, 190, 1240, 20);
-    drawMultilineText(formData.info || "", 167, 340, {
+    drawMultilineText(formData.info || "", 55, 375, {
       size: 18,
       maxWidth: 590,
       lineHeight: 18,
     });
 
     // nuovi campi
-    drawText(formData.canone, 230, 730, 18);
-    drawText(formData.canonedojo, 575, 730, 18);
-    drawText(formData.leadCanoneZero ? "SI" : "NO", 590, 690, 16);
-    drawText(formData.transatoCredito, 90, 590, 18);
-    drawText(formData.transatoDebito, 90, 510, 18);
-    drawText(formData.scontrinoMedio, 460, 590, 18);
-    drawText(formData.scontrinoMassimo, 460, 510, 18);
+    drawText(formData.canonedojo, 600, 770, 18);
+    drawText(formData.scontrinoMedio, 645, 510, 18);
+    drawText(formData.scontrinoMassimo, 645, 478, 18);
   
 
     // Firme
@@ -328,7 +324,15 @@ Partner Manager: ${formData.partnermanager || "-"}
 Email Partner Manager: ${formData.email_pmanager || "-"}
 
 Attuale gestore: ${formData.attualeGestore || "-"}
-Lead canone zero 6 mesi: ${formData.leadCanoneZero ? "SI" : "NO"}
+
+Carte:
+Amex: ${formData.amex || "-"}
+STF: ${formData.stf || "-"}
+
+Range di Volume:
+0-50k: ${formData.volume0_50k ? "SI" : "NO"}
+50k-150k: ${formData.volume50_150k ? "SI" : "NO"}
+150k-250k: ${formData.volume150_250k ? "SI" : "NO"}
 
 Note:
 ${formData.info || "-"}
@@ -463,77 +467,89 @@ ${formData.info || "-"}
           />
         </div>
 
-        {/* Condizioni attuali vs Dojo */}
+        {/* Carte e Range */}
         <div className="space-y-4">
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Condizioni attuali e Offerte
+            Offerta Dojo
           </h3>
 
-          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
-            <div className="space-y-3">
-              <h4 className="font-medium text-blue-800 text-sm sm:text-base">
-                Condizioni attuali
-              </h4>
-              <input
-                name="credito"
-                placeholder="Credito (CNS)"
-                value={formData.credito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="debito"
-                placeholder="Debito (CNS)"
-                value={formData.debito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="business"
-                placeholder="Business"
-                value={formData.business}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-medium text-blue-800 text-sm sm:text-base">
-                Condizioni Dojo
-              </h4>
-              <input
-                name="offcredito"
-                placeholder="Credito"
-                value={formData.offcredito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="offdebito"
-                placeholder="Debito"
-                value={formData.offdebito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="offbusiness"
-                placeholder="Business"
-                value={formData.offbusiness}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-            </div>
-          </div>
-
-          {/* Canoni */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <input
-              name="canone"
-              placeholder="Canone mensile"
-              value={formData.canone}
+              name="credito"
+              placeholder="Credito"
+              value={formData.credito}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
+            <input
+              name="debito"
+              placeholder="Debito"
+              value={formData.debito}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="business"
+              placeholder="Business"
+              value={formData.business}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+          </div>
+
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900 mt-6">
+            Carte
+          </h3>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <input
+              name="amex"
+              placeholder="Amex"
+              value={formData.amex}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+            <input
+              name="stf"
+              placeholder="STF"
+              value={formData.stf}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            />
+          </div>
+
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900 mt-6">
+            Range di Volume
+          </h3>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm sm:text-base">
+              <input
+                type="checkbox"
+                checked={formData.volume0_50k}
+                onChange={handleCheckboxChange("volume0_50k")}
+              />
+              <span>0 - 50k</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm sm:text-base">
+              <input
+                type="checkbox"
+                checked={formData.volume50_150k}
+                onChange={handleCheckboxChange("volume50_150k")}
+              />
+              <span>50k - 150k</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm sm:text-base">
+              <input
+                type="checkbox"
+                checked={formData.volume150_250k}
+                onChange={handleCheckboxChange("volume150_250k")}
+              />
+              <span>150k - 250k</span>
+            </label>
+          </div>
+
+          {/* Canone Dojo */}
+          <div className="space-y-3">
             <input
               name="canonedojo"
               placeholder="Canone mensile Dojo"
@@ -541,36 +557,14 @@ ${formData.info || "-"}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
-            <label className="inline-flex items-center gap-2 text-sm sm:text-base">
-              <input
-                type="checkbox"
-                checked={formData.leadCanoneZero}
-                onChange={handleCheckboxChange("leadCanoneZero")}
-              />
-              Lead canone zero 6 mesi
-            </label>
           </div>
 
-          {/* Transati/Scontrini */}
+          {/* Scontrini */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <input
-              name="transatoCredito"
-              placeholder="Transato mese credito"
-              value={formData.transatoCredito}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
             <input
               name="scontrinoMedio"
               placeholder="Scontrino medio"
               value={formData.scontrinoMedio}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="transatoDebito"
-              placeholder="Transato mese debito"
-              value={formData.transatoDebito}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />

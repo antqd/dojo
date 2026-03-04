@@ -75,6 +75,11 @@ export default function ComparazioneEstrattoAI() {
   const [aiResult, setAiResult] = useState("");
   const [editableSchema, setEditableSchema] = useState(emptySchema);
   const [aiError, setAiError] = useState("");
+  const [baseData, setBaseData] = useState({
+    transato: 0,
+    commissioni_attuali: 0,
+    media_attuale: 0,
+  });
   const [recipientInput, setRecipientInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendStatus, setSendStatus] = useState(null);
@@ -101,6 +106,23 @@ export default function ComparazioneEstrattoAI() {
       }
     });
 
+    // Estrae i dati base per il ricalcolo
+    const transatoLine = lines.find(l => l.toLowerCase().startsWith("transato:"));
+    const commissioni_attualiLine = lines.find(l => l.toLowerCase().startsWith("commissioni attuali:"));
+    const media_attualeeLine = lines.find(l => l.toLowerCase().startsWith("media attuale:"));
+
+    const parseNumeric = (str) => {
+      if (!str) return 0;
+      const num = parseFloat(String(str).replace(",", "."));
+      return isNaN(num) ? 0 : num;
+    };
+
+    setBaseData({
+      transato: parseNumeric(transatoLine?.split(":")[1]),
+      commissioni_attuali: parseNumeric(commissioni_attualiLine?.split(":")[1]),
+      media_attuale: parseNumeric(media_attualeeLine?.split(":")[1]),
+    });
+
     return result;
   };
 
@@ -121,6 +143,39 @@ export default function ComparazioneEstrattoAI() {
     setEditableSchema((prev) => ({
       ...prev,
       [key]: value,
+    }));
+  };
+
+  const handleRecalculate = () => {
+    // Estrae le nuove tariffe inserite (in percentuale)
+    const debitRate = parseFloat(String(editableSchema.debit || "0").replace(",", "."));
+    const creditRate = parseFloat(String(editableSchema.credit || "0").replace(",", "."));
+    const commercialRate = parseFloat(String(editableSchema.commercial || "0").replace(",", "."));
+    const amexRate = parseFloat(String(editableSchema.amex || "0").replace(",", "."));
+
+    // Stima media di transato per categoria (ipotesi: distribuiti equamente)
+    const peso = 0.25;
+    const nuova_media = (
+      debitRate * peso +
+      creditRate * peso +
+      commercialRate * peso +
+      amexRate * peso
+    );
+
+    const { transato, commissioni_attuali } = baseData;
+    const commissioni_nuove = (nuova_media / 100) * transato;
+    const risparmio_mensile = commissioni_attuali - commissioni_nuove;
+    const risparmio_annuale = risparmio_mensile * 12;
+
+    const formatNumWithComma = (num) => {
+      return num.toFixed(2).replace(".", ",");
+    };
+
+    setEditableSchema((prev) => ({
+      ...prev,
+      mediaFinale: formatNumWithComma(nuova_media),
+      risparmioMensile: formatNumWithComma(risparmio_mensile),
+      risparmioAnnuale: formatNumWithComma(risparmio_annuale),
     }));
   };
 
@@ -286,11 +341,19 @@ export default function ComparazioneEstrattoAI() {
                         onChange={(e) =>
                           handleEditableFieldChange(field.key, e.target.value)
                         }
-                        className="mt-1 w-full rounded border border-indigo-200 px-3 py-2 text-base text-indigo-950 focus:ring-2 focus:ring-indigo-500"
+                        disabled={["mediaFinale", "risparmioMensile", "risparmioAnnuale"].includes(field.key)}
+                        className="mt-1 w-full rounded border border-indigo-200 px-3 py-2 text-base text-indigo-950 focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
                     </div>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={handleRecalculate}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-full shadow-md text-sm mt-3"
+                >
+                  Ricalcola
+                </button>
               </div>
 
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-3">
