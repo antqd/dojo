@@ -41,6 +41,7 @@ const CompilerDojo = () => {
     canonedojo: "",
     scontrinoMedio: "",
     scontrinoMassimo: "",
+    transatoAnnuo: "",
     // NUOVE CARTE
     amex: "",
     stf: "",
@@ -248,6 +249,7 @@ const CompilerDojo = () => {
     drawText(formData.canonedojo, 600, 770, 18);
     drawText(formData.scontrinoMedio, 645, 510, 18);
     drawText(formData.scontrinoMassimo, 645, 478, 18);
+    drawText(formData.transatoAnnuo, 320, 915, 18);
   
 
     // Firme
@@ -333,6 +335,8 @@ Range di Volume:
 0-50k: ${formData.volume0_50k ? "SI" : "NO"}
 50k-150k: ${formData.volume50_150k ? "SI" : "NO"}
 150k-250k: ${formData.volume150_250k ? "SI" : "NO"}
+
+Transato Annuo: ${formData.transatoAnnuo || "-"}
 
 Note:
 ${formData.info || "-"}
@@ -467,99 +471,113 @@ ${formData.info || "-"}
           />
         </div>
 
-        {/* Carte e Range */}
-        <div className="space-y-4">
+        {/* Transato Annuo */}
+        <div className="space-y-2">
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Offerta Dojo
+            Transato Annuo
           </h3>
+          <input
+            name="transatoAnnuo"
+            placeholder="Transato annuo"
+            value={formData.transatoAnnuo}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          />
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <input
-              name="credito"
-              placeholder="Credito"
-              value={formData.credito}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="debito"
-              placeholder="Debito"
-              value={formData.debito}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="business"
-              placeholder="Business"
-              value={formData.business}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
+        {/* Flat Rate e Proposta Dojo Custom */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Flat Rate */}
+          <div className="space-y-4">
+            <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+              Flat Rate
+            </h3>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.volume0_50k}
+                  onChange={handleCheckboxChange("volume0_50k")}
+                />
+                <span>0 - 50k (1%)</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.volume50_150k}
+                  onChange={handleCheckboxChange("volume50_150k")}
+                />
+                <span>50k - 150k (0.9%)</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm sm:text-base">
+                <input
+                  type="checkbox"
+                  checked={formData.volume150_250k}
+                  onChange={handleCheckboxChange("volume150_250k")}
+                />
+                <span>150k - 250k (0.8%)</span>
+              </label>
+            </div>
           </div>
 
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900 mt-6">
-            Carte
+          {/* Proposta Dojo Custom */}
+          <div className="space-y-4">
+            <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+              Proposta Dojo Custom
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                name="credito"
+                placeholder="Credito"
+                value={formData.credito}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="debito"
+                placeholder="Debito"
+                value={formData.debito}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="business"
+                placeholder="Business"
+                value={formData.business}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="amex"
+                placeholder="Amex"
+                value={formData.amex}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="stf"
+                placeholder="STF"
+                value={formData.stf}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+              <input
+                name="canonedojo"
+                placeholder="Canone mensile Dojo"
+                value={formData.canonedojo}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Scontrini */}
+        <div className="space-y-2">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Scontrini
           </h3>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <input
-              name="amex"
-              placeholder="Amex"
-              value={formData.amex}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="stf"
-              placeholder="STF"
-              value={formData.stf}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900 mt-6">
-            Range di Volume
-          </h3>
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-sm sm:text-base">
-              <input
-                type="checkbox"
-                checked={formData.volume0_50k}
-                onChange={handleCheckboxChange("volume0_50k")}
-              />
-              <span>0 - 50k</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm sm:text-base">
-              <input
-                type="checkbox"
-                checked={formData.volume50_150k}
-                onChange={handleCheckboxChange("volume50_150k")}
-              />
-              <span>50k - 150k</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm sm:text-base">
-              <input
-                type="checkbox"
-                checked={formData.volume150_250k}
-                onChange={handleCheckboxChange("volume150_250k")}
-              />
-              <span>150k - 250k</span>
-            </label>
-          </div>
-
-          {/* Canone Dojo */}
-          <div className="space-y-3">
-            <input
-              name="canonedojo"
-              placeholder="Canone mensile Dojo"
-              value={formData.canonedojo}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
-
-          {/* Scontrini */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <input
               name="scontrinoMedio"
