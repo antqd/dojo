@@ -3,6 +3,108 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
 import SignatureCanvas from "react-signature-canvas";
 
+const SOFTPOS_PROFILES = [
+  {
+    id: "gold",
+    field: "softposGold",
+    label: "GOLD",
+    rates: [
+      ["Domestic", "Debit - Consumer", "0,61%"],
+      ["Domestic", "Credit - Consumer", "0,74%"],
+      ["Domestic", "Corporate", "1,75%"],
+      ["EU / Intra EEA", "Debit - Consumer", "0,70%"],
+      ["EU / Intra EEA", "Credit - Consumer", "0,81%"],
+      ["EU / Intra EEA", "Corporate", "1,99%"],
+      ["UK-EEA", "Debit - Consumer", "0,75%"],
+      ["UK-EEA", "Credit - Consumer", "0,86%"],
+      ["UK-EEA", "Corporate", "2,04%"],
+      ["International / Inter", "Debit - Consumer", "1,48%"],
+      ["International / Inter", "Credit - Consumer", "1,59%"],
+      ["International / Inter", "Corporate", "3,28%"],
+    ],
+  },
+  {
+    id: "platinum",
+    field: "softposPlatinum",
+    label: "PLATINUM",
+    rates: [
+      ["Domestic", "Debit - Consumer", "0,83%"],
+      ["Domestic", "Credit - Consumer", "0,94%"],
+      ["Domestic", "Corporate", "1,95%"],
+      ["EU / Intra EEA", "Debit - Consumer", "0,90%"],
+      ["EU / Intra EEA", "Credit - Consumer", "1,01%"],
+      ["EU / Intra EEA", "Corporate", "2,19%"],
+      ["UK-EEA", "Debit - Consumer", "0,95%"],
+      ["UK-EEA", "Credit - Consumer", "1,06%"],
+      ["UK-EEA", "Corporate", "2,24%"],
+      ["International / Inter", "Debit - Consumer", "1,68%"],
+      ["International / Inter", "Credit - Consumer", "1,79%"],
+      ["International / Inter", "Corporate", "3,48%"],
+    ],
+  },
+  {
+    id: "silver",
+    field: "softposSilver",
+    label: "SILVER",
+    rates: [
+      ["Domestic", "Debit - Consumer", "0,93%"],
+      ["Domestic", "Credit - Consumer", "1,04%"],
+      ["Domestic", "Corporate", "2,05%"],
+      ["EU / Intra EEA", "Debit - Consumer", "1,00%"],
+      ["EU / Intra EEA", "Credit - Consumer", "1,11%"],
+      ["EU / Intra EEA", "Corporate", "2,29%"],
+      ["UK-EEA", "Debit - Consumer", "1,05%"],
+      ["UK-EEA", "Credit - Consumer", "1,16%"],
+      ["UK-EEA", "Corporate", "2,34%"],
+      ["International / Inter", "Debit - Consumer", "1,78%"],
+      ["International / Inter", "Credit - Consumer", "1,89%"],
+      ["International / Inter", "Corporate", "3,58%"],
+    ],
+  },
+  {
+    id: "bronze",
+    field: "softposBronze",
+    label: "BRONZE",
+    rates: [
+      ["Domestic", "Debit - Consumer", "1,03%"],
+      ["Domestic", "Credit - Consumer", "1,14%"],
+      ["Domestic", "Corporate", "2,15%"],
+      ["EU / Intra EEA", "Debit - Consumer", "1,10%"],
+      ["EU / Intra EEA", "Credit - Consumer", "1,21%"],
+      ["EU / Intra EEA", "Corporate", "2,39%"],
+      ["UK-EEA", "Debit - Consumer", "1,15%"],
+      ["UK-EEA", "Credit - Consumer", "1,26%"],
+      ["UK-EEA", "Corporate", "2,44%"],
+      ["International / Inter", "Debit - Consumer", "1,88%"],
+      ["International / Inter", "Credit - Consumer", "1,99%"],
+      ["International / Inter", "Corporate", "3,68%"],
+    ],
+  },
+];
+
+const CANONE_OPTIONS = [
+  {
+    field: "canoneBasicAnnuale",
+    label: "Canone annuale Basic",
+    value: "99 euro oltre iva",
+  },
+  {
+    field: "canonePlusAnnuale",
+    label: "Canone annuale Plus",
+    value: "149 euro oltre iva",
+  },
+  {
+    field: "canoneBasicMensile",
+    label: "Canone Mensile Basic",
+    value: "10 euro oltre iva",
+  },
+  {
+    field: "canonePlusMensile",
+    label: "Canone Mensile Plus",
+    value: "15 euro oltre iva",
+  },
+];
+
 const CompilerAdesione = () => {
   // ======= Util =======
   const sanitizeForWinAnsi = (input) => {
@@ -42,19 +144,14 @@ const CompilerAdesione = () => {
 
     // SERVIZIO / ECONOMICO
     descrizioneServizio: "",
-    servizioAbbonamentoAnnuale: false, // ✅ SOLO PAG 3
-    servizioPagaTreRate: false,
-    servizioGiftCard: false,
-    servizioPosVirtuale: false,
-    servizioCardAziendali: false,
-    servizioAltro: false,
-    servizioAltroDescrizione: "",
-    prezzoServizio0: "", // abbonamento annuale
-    prezzoServizio1: "",
-    prezzoServizio2: "",
-    prezzoServizio3: "",
-    prezzoServizio4: "",
-    prezzoServizio5: "",
+    canoneBasicMensile: false,
+    canoneBasicAnnuale: false,
+    canonePlusMensile: false,
+    canonePlusAnnuale: false,
+    softposGold: false,
+    softposPlatinum: false,
+    softposSilver: false,
+    softposBronze: false,
 
     // ✅ AGENTE (NUOVO)
     agenteNomeCognome: "",
@@ -75,6 +172,7 @@ const CompilerAdesione = () => {
   const [files, setFiles] = useState([]);
   const [filePreviews, setFilePreviews] = useState([]);
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfVersion, setPdfVersion] = useState(0);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -171,29 +269,26 @@ const CompilerAdesione = () => {
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
+  const buildSoftposRatesText = (profile) => {
+    if (!profile) return "";
+    return profile.rates
+      .map(([area, cardType, rate]) => `${area} - ${cardType}: ${rate}`)
+      .join("\n");
+  };
+
   // Riepilogo prezzi per EMAIL (non per pagina 1 del PDF)
   const buildPrezziServiziText = () => {
     const lines = [];
-    const pushLine = (label, value) => {
-      const cleanValue = (value || "").trim();
-      if (cleanValue) lines.push(`${label}: ${cleanValue}`);
-    };
+    CANONE_OPTIONS.forEach(({ field, label, value }) => {
+      if (formData[field] === true) lines.push(`${label}: ${value}`);
+    });
 
-    pushLine("Abbonamento annuale", formData.prezzoServizio0);
-    pushLine("Servizio 1 - paga in 3 rate", formData.prezzoServizio1);
-    pushLine(
-      "Servizio 2 - pubblicazione Gift Card Davveroo.it",
-      formData.prezzoServizio2
-    );
-    pushLine("Servizio 3 - pos virtuale", formData.prezzoServizio3);
-    pushLine("Servizio 4 - emissione card aziendali", formData.prezzoServizio4);
-
-    if ((formData.prezzoServizio5 || "").trim()) {
-      const altLabel = formData.servizioAltroDescrizione?.trim()
-        ? `Servizio 5 - Altro (${formData.servizioAltroDescrizione.trim()})`
-        : "Servizio 5 - Altro";
-      pushLine(altLabel, formData.prezzoServizio5);
-    }
+    SOFTPOS_PROFILES.forEach((profile) => {
+      if (formData[profile.field] !== true) return;
+      lines.push(
+        `SoftPOS ${profile.label}:\n${buildSoftposRatesText(profile)}`
+      );
+    });
 
     return lines.join("\n");
   };
@@ -286,12 +381,6 @@ const CompilerAdesione = () => {
       return cursorY;
     };
 
-    const drawPrezzoIfAny = (page, prezzo, x, y) => {
-      const val = String(prezzo || "").trim();
-      if (!val) return;
-      drawTextOn(page, val, x, y, 12, fontBold);
-    };
-
     // === PAGINA 1 ===
 
     // Dati azienda (colonna sinistra)
@@ -326,18 +415,6 @@ const CompilerAdesione = () => {
       size: 11,
       maxWidth: 360,
       lineHeight: 13,
-    });
-
-    // ✅ Checkboxes pagina 1 (NO abbonamento annuale)
-    const checkboxMapPage1 = [
-      { field: "servizioPagaTreRate", x: 38, y: 418 },
-      { field: "servizioGiftCard", x: 38, y: 392 },
-      { field: "servizioPosVirtuale", x: 38, y: 368 },
-      { field: "servizioCardAziendali", x: 38, y: 342 },
-      { field: "servizioAltro", x: 38, y: 315 },
-    ];
-    checkboxMapPage1.forEach(({ field, x, y }) => {
-      if (formData[field] === true) drawTextOn(page1, "X", x, y, 12, fontBold);
     });
 
     // ✅ AGENTE (stessa area “personale manager” che avevi)
@@ -399,87 +476,29 @@ const CompilerAdesione = () => {
         page3.drawImage(png, { x: 380, y: 120, width: 180, height: 45 });
       }
 
-      const page3ServiceMap = [
-        {
-          field: "servizioAbbonamentoAnnuale",
-          prezzoField: "prezzoServizio0",
-          xCheck: 62,
-          yCheck: 713,
-          xPrice: 145,
-          yPrice: 693,
-        },
-        {
-          field: "servizioGiftCard",
-          prezzoField: "prezzoServizio2",
-          xCheck: 62,
-          yCheck: 640,
-          xPrice: 145,
-          yPrice: 609,
-        },
-        {
-          field: "servizioPagaTreRate",
-          prezzoField: "prezzoServizio1",
-          xCheck: 62,
-          yCheck: 550,
-          xPrice: 145,
-          yPrice: 520,
-        },
-        {
-          field: "servizioPosVirtuale",
-          prezzoField: "prezzoServizio3",
-          xCheck: 62,
-          yCheck: 488,
-          xPrice: 145,
-          yPrice: 430,
-        },
-        {
-          field: "servizioCardAziendali",
-          prezzoField: "prezzoServizio4",
-          xCheck: 62,
-          yCheck: 420,
-          xPrice: 145,
-          yPrice: 305,
-        },
-        {
-          field: "servizioAltro",
-          prezzoField: "prezzoServizio5",
-          xCheck: 62,
-          yCheck: 240,
-          xPrice: 145,
-          yPrice: 195,
-        },
+      const page3CheckboxMap = [
+        { field: "canoneBasicAnnuale", xCheck: 62, yCheck: 713 },
+        { field: "canonePlusAnnuale", xCheck: 312, yCheck: 710 },
+        { field: "canoneBasicMensile", xCheck: 62, yCheck: 590 },
+        { field: "canonePlusMensile", xCheck: 312, yCheck: 590 },
+        { field: "softposGold", xCheck: 50, yCheck: 307 },
+        { field: "softposPlatinum", xCheck: 190, yCheck: 307 },
+        { field: "softposSilver", xCheck: 335, yCheck: 307 },
+        { field: "softposBronze", xCheck: 468, yCheck: 307 },
       ];
 
-      page3ServiceMap.forEach(
-        ({ field, prezzoField, xCheck, yCheck, xPrice, yPrice }) => {
-          const isChecked = formData[field] === true;
-          const prezzo = formData[prezzoField];
-
-          if (isChecked) drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
-          if (String(prezzo || "").trim())
-            drawPrezzoIfAny(page3, prezzo, xPrice, yPrice);
-        }
-      );
-
-      if (
-        formData.servizioAltro === true &&
-        String(formData.servizioAltroDescrizione || "").trim()
-      ) {
-        drawTextOn(
-          page3,
-          `(${formData.servizioAltroDescrizione.trim()})`,
-          135,
-          233,
-          10,
-          font
-        );
-      }
+      page3CheckboxMap.forEach(({ field, xCheck, yCheck }) => {
+        if (formData[field] === true)
+          drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
+      });
     }
 
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     setPdfUrl(url);
+    setPdfVersion((version) => version + 1);
   };
 
   const scaricaPdf = () =>
@@ -720,131 +739,71 @@ const CompilerAdesione = () => {
 
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-800">
-              Seleziona i servizi e inserisci il prezzo
+              Seleziona i canoni da riportare nella terza pagina
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Abbonamento annuale */}
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:col-span-2">
-                <label className="flex items-center gap-2 text-sm sm:text-base">
+              {CANONE_OPTIONS.map(({ field, label, value }) => (
+                <label
+                  key={field}
+                  className={`flex items-start gap-3 rounded-lg border p-3 text-sm sm:text-base ${
+                    formData[field] === true
+                      ? "border-blue-600 bg-blue-50"
+                      : "border-gray-200"
+                  }`}
+                >
                   <input
                     type="checkbox"
-                    checked={formData.servizioAbbonamentoAnnuale}
-                    onChange={handleCheckboxChange(
-                      "servizioAbbonamentoAnnuale"
-                    )}
+                    checked={formData[field]}
+                    onChange={handleCheckboxChange(field)}
+                    className="mt-1"
                   />
-                  Abbonamento annuale
+                  <span className="flex flex-col">
+                    <span className="font-semibold text-gray-900">{label}</span>
+                    <span className="text-sm text-gray-700">{value}</span>
+                  </span>
                 </label>
-                <input
-                  name="prezzoServizio0"
-                  placeholder="Prezzo abbonamento annuale"
-                  value={formData.prezzoServizio0}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                />
-              </div>
+              ))}
+            </div>
+          </div>
 
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
-                <label className="flex items-center gap-2 text-sm sm:text-base">
-                  <input
-                    type="checkbox"
-                    checked={formData.servizioPagaTreRate}
-                    onChange={handleCheckboxChange("servizioPagaTreRate")}
-                  />
-                  Servizio 1 - paga in 3 rate
+          <div className="space-y-3 rounded-lg border border-gray-200 p-3">
+            <p className="text-sm font-medium text-gray-800">
+              Profilo SoftPOS
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {SOFTPOS_PROFILES.map((profile) => (
+                <label
+                  key={profile.id}
+                  className={`flex flex-col gap-2 rounded-lg border p-3 text-sm ${
+                    formData[profile.field] === true
+                      ? "border-blue-600 bg-blue-50"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-semibold text-gray-900">
+                    <input
+                      type="checkbox"
+                      checked={formData[profile.field]}
+                      onChange={handleCheckboxChange(profile.field)}
+                    />
+                    {profile.label}
+                  </span>
+                  <span className="grid grid-cols-1 gap-1 text-xs text-gray-700">
+                    {profile.rates.map(([area, cardType, rate], index) => (
+                      <span
+                        key={`${profile.id}-${area}-${cardType}-${index}`}
+                        className="flex justify-between gap-3 border-t border-gray-100 pt-1 first:border-t-0 first:pt-0"
+                      >
+                        <span>
+                          {area} - {cardType}
+                        </span>
+                        <span className="font-semibold">{rate}</span>
+                      </span>
+                    ))}
+                  </span>
                 </label>
-                <input
-                  name="prezzoServizio1"
-                  placeholder="Prezzo servizio 1"
-                  value={formData.prezzoServizio1}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
-                <label className="flex items-center gap-2 text-sm sm:text-base">
-                  <input
-                    type="checkbox"
-                    checked={formData.servizioGiftCard}
-                    onChange={handleCheckboxChange("servizioGiftCard")}
-                  />
-                  Servizio 2 - pubblicazione Gift Card Davveroo.it
-                </label>
-                <input
-                  name="prezzoServizio2"
-                  placeholder="Prezzo servizio 2"
-                  value={formData.prezzoServizio2}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
-                <label className="flex items-center gap-2 text-sm sm:text-base">
-                  <input
-                    type="checkbox"
-                    checked={formData.servizioPosVirtuale}
-                    onChange={handleCheckboxChange("servizioPosVirtuale")}
-                  />
-                  Servizio 3 - pos virtuale
-                </label>
-                <input
-                  name="prezzoServizio3"
-                  placeholder="Prezzo servizio 3"
-                  value={formData.prezzoServizio3}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
-                <label className="flex items-center gap-2 text-sm sm:text-base">
-                  <input
-                    type="checkbox"
-                    checked={formData.servizioCardAziendali}
-                    onChange={handleCheckboxChange("servizioCardAziendali")}
-                  />
-                  Servizio 4 - emissione card aziendali
-                </label>
-                <input
-                  name="prezzoServizio4"
-                  placeholder="Prezzo servizio 4"
-                  value={formData.prezzoServizio4}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 sm:col-span-2">
-                <label className="flex items-center gap-2 text-sm sm:text-base">
-                  <input
-                    type="checkbox"
-                    checked={formData.servizioAltro}
-                    onChange={handleCheckboxChange("servizioAltro")}
-                  />
-                  Servizio 5 - Altro
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <input
-                    name="servizioAltroDescrizione"
-                    placeholder="Specifica il servizio 'Altro'"
-                    value={formData.servizioAltroDescrizione}
-                    onChange={handleChange}
-                    disabled={!formData.servizioAltro}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base disabled:bg-gray-100"
-                  />
-                  <input
-                    name="prezzoServizio5"
-                    placeholder="Prezzo servizio 5 / Altro"
-                    value={formData.prezzoServizio5}
-                    onChange={handleChange}
-                    disabled={!formData.servizioAltro}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base disabled:bg-gray-100"
-                  />
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -1161,7 +1120,7 @@ const CompilerAdesione = () => {
             </h3>
             <div className="border border-gray-300 rounded-lg overflow-hidden">
               <iframe
-                src={pdfUrl}
+                src={`${pdfUrl}#v=${pdfVersion}`}
                 className="w-full h-[400px] sm:h-[500px] lg:h-[600px]"
                 title="Anteprima PDF"
               />
