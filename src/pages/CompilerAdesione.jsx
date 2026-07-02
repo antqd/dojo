@@ -8,77 +8,25 @@ const SOFTPOS_PROFILES = [
     id: "gold",
     field: "softposGold",
     label: "GOLD",
-    rates: [
-      ["Domestic", "Debit - Consumer", "0,61%"],
-      ["Domestic", "Credit - Consumer", "0,74%"],
-      ["Domestic", "Corporate", "1,75%"],
-      ["EU / Intra EEA", "Debit - Consumer", "0,70%"],
-      ["EU / Intra EEA", "Credit - Consumer", "0,81%"],
-      ["EU / Intra EEA", "Corporate", "1,99%"],
-      ["UK-EEA", "Debit - Consumer", "0,75%"],
-      ["UK-EEA", "Credit - Consumer", "0,86%"],
-      ["UK-EEA", "Corporate", "2,04%"],
-      ["International / Inter", "Debit - Consumer", "1,48%"],
-      ["International / Inter", "Credit - Consumer", "1,59%"],
-      ["International / Inter", "Corporate", "3,28%"],
-    ],
+    minimumPayout: "Erogato minimo 4.000 euro",
   },
   {
     id: "platinum",
     field: "softposPlatinum",
     label: "PLATINUM",
-    rates: [
-      ["Domestic", "Debit - Consumer", "0,83%"],
-      ["Domestic", "Credit - Consumer", "0,94%"],
-      ["Domestic", "Corporate", "1,95%"],
-      ["EU / Intra EEA", "Debit - Consumer", "0,90%"],
-      ["EU / Intra EEA", "Credit - Consumer", "1,01%"],
-      ["EU / Intra EEA", "Corporate", "2,19%"],
-      ["UK-EEA", "Debit - Consumer", "0,95%"],
-      ["UK-EEA", "Credit - Consumer", "1,06%"],
-      ["UK-EEA", "Corporate", "2,24%"],
-      ["International / Inter", "Debit - Consumer", "1,68%"],
-      ["International / Inter", "Credit - Consumer", "1,79%"],
-      ["International / Inter", "Corporate", "3,48%"],
-    ],
+    minimumPayout: "Erogato minimo 2.000 euro",
   },
   {
     id: "silver",
     field: "softposSilver",
     label: "SILVER",
-    rates: [
-      ["Domestic", "Debit - Consumer", "0,93%"],
-      ["Domestic", "Credit - Consumer", "1,04%"],
-      ["Domestic", "Corporate", "2,05%"],
-      ["EU / Intra EEA", "Debit - Consumer", "1,00%"],
-      ["EU / Intra EEA", "Credit - Consumer", "1,11%"],
-      ["EU / Intra EEA", "Corporate", "2,29%"],
-      ["UK-EEA", "Debit - Consumer", "1,05%"],
-      ["UK-EEA", "Credit - Consumer", "1,16%"],
-      ["UK-EEA", "Corporate", "2,34%"],
-      ["International / Inter", "Debit - Consumer", "1,78%"],
-      ["International / Inter", "Credit - Consumer", "1,89%"],
-      ["International / Inter", "Corporate", "3,58%"],
-    ],
+    minimumPayout: "Erogato minimo 1.000 euro",
   },
   {
     id: "bronze",
     field: "softposBronze",
     label: "BRONZE",
-    rates: [
-      ["Domestic", "Debit - Consumer", "1,03%"],
-      ["Domestic", "Credit - Consumer", "1,14%"],
-      ["Domestic", "Corporate", "2,15%"],
-      ["EU / Intra EEA", "Debit - Consumer", "1,10%"],
-      ["EU / Intra EEA", "Credit - Consumer", "1,21%"],
-      ["EU / Intra EEA", "Corporate", "2,39%"],
-      ["UK-EEA", "Debit - Consumer", "1,15%"],
-      ["UK-EEA", "Credit - Consumer", "1,26%"],
-      ["UK-EEA", "Corporate", "2,44%"],
-      ["International / Inter", "Debit - Consumer", "1,88%"],
-      ["International / Inter", "Credit - Consumer", "1,99%"],
-      ["International / Inter", "Corporate", "3,68%"],
-    ],
+    minimumPayout: "Erogato minimo 500 euro",
   },
 ];
 
@@ -269,13 +217,6 @@ const CompilerAdesione = () => {
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
-  const buildSoftposRatesText = (profile) => {
-    if (!profile) return "";
-    return profile.rates
-      .map(([area, cardType, rate]) => `${area} - ${cardType}: ${rate}`)
-      .join("\n");
-  };
-
   // Riepilogo prezzi per EMAIL (non per pagina 1 del PDF)
   const buildPrezziServiziText = () => {
     const lines = [];
@@ -285,9 +226,7 @@ const CompilerAdesione = () => {
 
     SOFTPOS_PROFILES.forEach((profile) => {
       if (formData[profile.field] !== true) return;
-      lines.push(
-        `SoftPOS ${profile.label}:\n${buildSoftposRatesText(profile)}`
-      );
+      lines.push(`SoftPOS ${profile.label}: ${profile.minimumPayout}`);
     });
 
     return lines.join("\n");
@@ -789,18 +728,8 @@ const CompilerAdesione = () => {
                     />
                     {profile.label}
                   </span>
-                  <span className="grid grid-cols-1 gap-1 text-xs text-gray-700">
-                    {profile.rates.map(([area, cardType, rate], index) => (
-                      <span
-                        key={`${profile.id}-${area}-${cardType}-${index}`}
-                        className="flex justify-between gap-3 border-t border-gray-100 pt-1 first:border-t-0 first:pt-0"
-                      >
-                        <span>
-                          {area} - {cardType}
-                        </span>
-                        <span className="font-semibold">{rate}</span>
-                      </span>
-                    ))}
+                  <span className="text-sm text-gray-700">
+                    {profile.minimumPayout}
                   </span>
                 </label>
               ))}
