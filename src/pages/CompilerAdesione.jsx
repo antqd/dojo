@@ -100,6 +100,8 @@ const CompilerAdesione = () => {
     softposPlatinum: false,
     softposSilver: false,
     softposBronze: false,
+    codiceScontoPrimoAnnoEnabled: false,
+    codiceScontoPrimoAnno: "",
 
     // ✅ AGENTE (NUOVO)
     agenteNomeCognome: "",
@@ -228,6 +230,14 @@ const CompilerAdesione = () => {
       if (formData[profile.field] !== true) return;
       lines.push(`SoftPOS ${profile.label}: ${profile.minimumPayout}`);
     });
+
+    if (formData.codiceScontoPrimoAnnoEnabled === true) {
+      lines.push(
+        `Codice Sconto primo anno: ${
+          formData.codiceScontoPrimoAnno || "non specificato"
+        }`
+      );
+    }
 
     return lines.join("\n");
   };
@@ -430,6 +440,18 @@ const CompilerAdesione = () => {
         if (formData[field] === true)
           drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
       });
+
+      if (formData.codiceScontoPrimoAnnoEnabled === true) {
+        drawTextOn(page3, "X", 62, 530, 13, fontBold);
+        drawTextOn(
+          page3,
+          formData.codiceScontoPrimoAnno || "",
+          352,
+          530,
+          10,
+          font
+        );
+      }
     }
 
     const pdfBytes = await pdfDoc.save();
@@ -734,6 +756,33 @@ const CompilerAdesione = () => {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-gray-200 p-3">
+            <label
+              className={`flex items-center gap-3 text-sm sm:text-base ${
+                formData.codiceScontoPrimoAnnoEnabled === true
+                  ? "text-blue-900"
+                  : "text-gray-900"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={formData.codiceScontoPrimoAnnoEnabled}
+                onChange={handleCheckboxChange("codiceScontoPrimoAnnoEnabled")}
+              />
+              <span className="font-semibold">Codice Sconto primo anno</span>
+            </label>
+
+            {formData.codiceScontoPrimoAnnoEnabled === true && (
+              <input
+                name="codiceScontoPrimoAnno"
+                placeholder="Inserisci codice sconto primo anno"
+                value={formData.codiceScontoPrimoAnno}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+            )}
           </div>
 
           <textarea
