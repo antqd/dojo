@@ -1,7 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
-import SignatureCanvas from "react-signature-canvas";
 
 const SOFTPOS_PROFILES = [
   {
@@ -129,14 +128,6 @@ const CompilerAdesione = () => {
   const [isStartingYousign, setIsStartingYousign] = useState(false);
   const [yousignResult, setYousignResult] = useState(null);
 
-  const [isSignatureClienteActive, setIsSignatureClienteActive] =
-    useState(false);
-  const [isSignatureManagerActive, setIsSignatureManagerActive] =
-    useState(false);
-
-  const sigCanvasClienteRef = useRef();
-  const sigCanvasManagerRef = useRef();
-
   const API_CLIENTE = "https://api.davveroo.it/api/email/attivazione";
   const API_YOUSIGN =
     import.meta.env.VITE_YOUSIGN_API_URL ||
@@ -160,26 +151,16 @@ const CompilerAdesione = () => {
       reader.readAsDataURL(file);
     });
 
-  const getFirmaClienteImage = () => {
-    if (!sigCanvasClienteRef.current || sigCanvasClienteRef.current.isEmpty())
-      return null;
-    return sigCanvasClienteRef.current
-      .getTrimmedCanvas()
-      .toDataURL("image/png");
-  };
-  const getFirmaManagerImage = () => {
-    if (!sigCanvasManagerRef.current || sigCanvasManagerRef.current.isEmpty())
-      return null;
-    return sigCanvasManagerRef.current
-      .getTrimmedCanvas()
-      .toDataURL("image/png");
+  const normalizePhoneForOtp = (phone) => {
+    const compact = String(phone || "").replace(/[\s().-]/g, "");
+    if (!compact) return "";
+    if (compact.startsWith("+")) return compact;
+    if (compact.startsWith("00")) return `+${compact.slice(2)}`;
+    if (/^3\d{8,10}$/.test(compact)) return `+39${compact}`;
+    return compact;
   };
 
-  const clearFirmaCliente = () => sigCanvasClienteRef.current?.clear();
-  const clearFirmaManager = () => sigCanvasManagerRef.current?.clear();
-
-  const toggleSignatureCliente = () => setIsSignatureClienteActive((v) => !v);
-  const toggleSignatureManager = () => setIsSignatureManagerActive((v) => !v);
+  const isValidOtpPhone = (phone) => /^\+[1-9]\d{7,14}$/.test(phone);
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -394,25 +375,10 @@ const CompilerAdesione = () => {
       lineHeight: 13,
     });
 
-    // Firma Partner Manager (opzionale) – pagina 1
-    const firmaManager = getFirmaManagerImage();
-    if (firmaManager) {
-      const bytes = await fetch(firmaManager).then((r) => r.arrayBuffer());
-      const png = await pdfDoc.embedPng(bytes);
-      page1.drawImage(png, { x: 340, y: 150, width: 160, height: 45 });
-    }
-
-    // === PAGINA 2 (data + firma cliente) ===
+    // === PAGINA 2 (data contratto) ===
     if (page2) {
       if (formData.dataContratto) {
         drawTextOn(page2, formData.dataContratto, 84, 120, 11);
-      }
-
-      const firmaCliente = getFirmaClienteImage();
-      if (firmaCliente) {
-        const bytes = await fetch(firmaCliente).then((r) => r.arrayBuffer());
-        const png = await pdfDoc.embedPng(bytes);
-        page2.drawImage(png, { x: 380, y: 120, width: 180, height: 45 });
       }
     }
 
@@ -420,15 +386,6 @@ const CompilerAdesione = () => {
     if (page3) {
       if (formData.dataContratto) {
         drawTextOn(page3, formData.dataContratto, 84, 120, 11);
-      }
-
-      const firmaClientePage3 = getFirmaClienteImage();
-      if (firmaClientePage3) {
-        const bytes = await fetch(firmaClientePage3).then((r) =>
-          r.arrayBuffer()
-        );
-        const png = await pdfDoc.embedPng(bytes);
-        page3.drawImage(png, { x: 380, y: 120, width: 180, height: 45 });
       }
 
       const page3CheckboxMap = [
@@ -558,6 +515,7 @@ const CompilerAdesione = () => {
 
     const signerEmail =
       formData.legaleMail?.trim() || formData.mailAzienda?.trim();
+    const signerPhoneNumber = normalizePhoneForOtp(formData.legaleCellulare);
 
     if (!formData.legaleNomeCognome?.trim()) {
       alert("Inserisci nome e cognome del legale rappresentante.");
@@ -566,6 +524,13 @@ const CompilerAdesione = () => {
 
     if (!signerEmail) {
       alert("Inserisci la mail del legale rappresentante o la mail azienda.");
+      return;
+    }
+
+    if (!isValidOtpPhone(signerPhoneNumber)) {
+      alert(
+        "Inserisci il cellulare del legale rappresentante in formato internazionale, ad esempio +393272485716."
+      );
       return;
     }
 
@@ -588,7 +553,7 @@ const CompilerAdesione = () => {
         signer: {
           fullName: formData.legaleNomeCognome.trim(),
           email: signerEmail,
-          phoneNumber: formData.legaleCellulare?.trim() || "",
+          phoneNumber: signerPhoneNumber,
           locale: "it",
         },
         signatureRequest: {
@@ -758,8 +723,9 @@ const CompilerAdesione = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
             />
             <input
+              type="tel"
               name="legaleCellulare"
-              placeholder="Cellulare"
+              placeholder="Cellulare OTP es. +393272485716"
               value={formData.legaleCellulare}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
@@ -1091,105 +1057,6 @@ const CompilerAdesione = () => {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Firme */}
-        <div className="bg-gray-50 p-4 rounded-lg space-y-6">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-              <p className="text-blue-900 font-semibold">
-                Firma Partner Manager
-              </p>
-              <button
-                onClick={toggleSignatureManager}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  isSignatureManagerActive
-                    ? "bg-red-500 text-white"
-                    : "bg-green-500 text-white"
-                }`}
-              >
-                {isSignatureManagerActive
-                  ? "Disattiva firma"
-                  : "Attiva firma"}
-              </button>
-            </div>
-
-            {isSignatureManagerActive ? (
-              <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
-                <SignatureCanvas
-                  ref={sigCanvasManagerRef}
-                  penColor="black"
-                  canvasProps={{
-                    width: 1000,
-                    height: 150,
-                    className: "rounded-md",
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
-                <p className="text-gray-500 text-center">
-                  Clicca su "Attiva firma" per firmare come Partner Manager
-                </p>
-              </div>
-            )}
-
-            {isSignatureManagerActive && (
-              <button
-                onClick={clearFirmaManager}
-                type="button"
-                className="mt-2 text-sm text-blue-700 underline"
-              >
-                Cancella firma
-              </button>
-            )}
-          </div>
-
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-              <p className="text-blue-900 font-semibold">Firma Cliente</p>
-              <button
-                onClick={toggleSignatureCliente}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  isSignatureClienteActive
-                    ? "bg-red-500 text-white"
-                    : "bg-green-500 text-white"
-                }`}
-              >
-                {isSignatureClienteActive ? "Disattiva firma" : "Attiva firma"}
-              </button>
-            </div>
-
-            {isSignatureClienteActive ? (
-              <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
-                <SignatureCanvas
-                  ref={sigCanvasClienteRef}
-                  penColor="black"
-                  canvasProps={{
-                    width: 1000,
-                    height: 150,
-                    className: "rounded-md",
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
-                <p className="text-gray-500 text-center">
-                  Clicca su "Attiva firma" per firmare come cliente
-                </p>
-              </div>
-            )}
-
-            {isSignatureClienteActive && (
-              <button
-                onClick={clearFirmaCliente}
-                type="button"
-                className="mt-2 text-sm text-blue-700 underline"
-              >
-                Cancella firma
-              </button>
-            )}
           </div>
         </div>
 
