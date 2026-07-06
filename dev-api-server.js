@@ -7,12 +7,36 @@ const PORT = 3001;
 // Dinamicamente import la funzione handler
 const getHandler = async (apiName) => {
   try {
-    const module = await import(`../api/${apiName}.js`);
+    const module = await import(`./api/${apiName}.js`);
     return module.default;
   } catch (error) {
     console.error(`API ${apiName} not found:`, error.message);
     return null;
   }
+};
+
+const createDevResponse = (res) => {
+  res.status = (statusCode) => {
+    res.statusCode = statusCode;
+    return res;
+  };
+
+  res.set = (headers) => {
+    Object.entries(headers || {}).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+    return res;
+  };
+
+  res.json = (body) => {
+    if (!res.hasHeader("Content-Type")) {
+      res.setHeader("Content-Type", "application/json");
+    }
+    res.end(JSON.stringify(body));
+    return res;
+  };
+
+  return res;
 };
 
 const server = http.createServer(async (req, res) => {
@@ -46,6 +70,7 @@ const server = http.createServer(async (req, res) => {
   req.on("end", async () => {
     try {
       const handler = await getHandler(apiName);
+      const devRes = createDevResponse(res);
 
       if (!handler) {
         res.writeHead(404, { "Content-Type": "application/json" });
@@ -56,9 +81,9 @@ const server = http.createServer(async (req, res) => {
       req.body = body ? JSON.parse(body) : {};
       console.log(`[API] ${req.method} /api/${apiName}`);
 
-      const result = await handler(req, res);
+      const result = await handler(req, devRes);
 
-      if (result?.statusCode) {
+      if (!res.writableEnded && result?.statusCode) {
         res.writeHead(result.statusCode, result.headers);
         res.end(result.body);
       }

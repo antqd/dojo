@@ -125,6 +125,9 @@ const CompilerAdesione = () => {
   const [pdfVersion, setPdfVersion] = useState(0);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [yousignStatus, setYousignStatus] = useState(null);
+  const [isStartingYousign, setIsStartingYousign] = useState(false);
+  const [yousignResult, setYousignResult] = useState(null);
 
   const [isSignatureClienteActive, setIsSignatureClienteActive] =
     useState(false);
@@ -135,6 +138,9 @@ const CompilerAdesione = () => {
   const sigCanvasManagerRef = useRef();
 
   const API_CLIENTE = "https://api.davveroo.it/api/email/attivazione";
+  const API_YOUSIGN =
+    import.meta.env.VITE_YOUSIGN_API_URL ||
+    "https://api.davveroo.it/api/yousign-signature-request";
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -544,6 +550,82 @@ const CompilerAdesione = () => {
       alert(`Errore durante l'invio: ${err.message}`);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleStartYousignSignature() {
+    if (!pdfUrl) return alert("Genera prima il PDF.");
+
+    const signerEmail =
+      formData.legaleMail?.trim() || formData.mailAzienda?.trim();
+
+    if (!formData.legaleNomeCognome?.trim()) {
+      alert("Inserisci nome e cognome del legale rappresentante.");
+      return;
+    }
+
+    if (!signerEmail) {
+      alert("Inserisci la mail del legale rappresentante o la mail azienda.");
+      return;
+    }
+
+    setYousignStatus(null);
+    setYousignResult(null);
+    setIsStartingYousign(true);
+
+    try {
+      const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
+      const pdfFile = new File([pdfBlob], "modulo_adesione_expopay.pdf", {
+        type: "application/pdf",
+      });
+
+      const payload = {
+        document: {
+          filename: pdfFile.name,
+          mimeType: pdfFile.type,
+          base64: await convertFileToBase64(pdfFile),
+        },
+        signer: {
+          fullName: formData.legaleNomeCognome.trim(),
+          email: signerEmail,
+          phoneNumber: formData.legaleCellulare?.trim() || "",
+          locale: "it",
+        },
+        signatureRequest: {
+          name: `Modulo adesione Davveroo - ${
+            formData.ragioneSociale?.trim() || "cliente"
+          }`,
+          externalId: formData.partitaIva?.trim() || undefined,
+          deliveryMode: "email",
+        },
+        metadata: {
+          ragioneSociale: formData.ragioneSociale?.trim() || "",
+          partitaIva: formData.partitaIva?.trim() || "",
+          agenteMail: formData.agenteMail?.trim() || "",
+        },
+      };
+
+      const res = await fetch(API_YOUSIGN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const details = data?.step ? ` (${data.step})` : "";
+        throw new Error(data?.error ? `${data.error}${details}` : `HTTP ${res.status}`);
+      }
+
+      setYousignResult(data);
+      setYousignStatus("success");
+      alert("Richiesta di firma digitale Yousign avviata.");
+    } catch (err) {
+      console.error(err);
+      setYousignStatus("error");
+      alert(`Errore Yousign: ${err.message}`);
+    } finally {
+      setIsStartingYousign(false);
     }
   }
 
@@ -1016,6 +1098,56 @@ const CompilerAdesione = () => {
         <div className="bg-gray-50 p-4 rounded-lg space-y-6">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
+              <p className="text-blue-900 font-semibold">
+                Firma Partner Manager
+              </p>
+              <button
+                onClick={toggleSignatureManager}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  isSignatureManagerActive
+                    ? "bg-red-500 text-white"
+                    : "bg-green-500 text-white"
+                }`}
+              >
+                {isSignatureManagerActive
+                  ? "Disattiva firma"
+                  : "Attiva firma"}
+              </button>
+            </div>
+
+            {isSignatureManagerActive ? (
+              <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
+                <SignatureCanvas
+                  ref={sigCanvasManagerRef}
+                  penColor="black"
+                  canvasProps={{
+                    width: 1000,
+                    height: 150,
+                    className: "rounded-md",
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="border border-gray-300 rounded-lg bg-gray-100 h-[150px] flex items-center justify-center">
+                <p className="text-gray-500 text-center">
+                  Clicca su "Attiva firma" per firmare come Partner Manager
+                </p>
+              </div>
+            )}
+
+            {isSignatureManagerActive && (
+              <button
+                onClick={clearFirmaManager}
+                type="button"
+                className="mt-2 text-sm text-blue-700 underline"
+              >
+                Cancella firma
+              </button>
+            )}
+          </div>
+
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <p className="text-blue-900 font-semibold">Firma Cliente</p>
               <button
                 onClick={toggleSignatureCliente}
@@ -1088,7 +1220,72 @@ const CompilerAdesione = () => {
           >
             {isSubmitting ? "Invio in corso..." : "Invia a Backoffice"}
           </button>
+          <button
+            type="button"
+            onClick={handleStartYousignSignature}
+            disabled={isStartingYousign || !pdfUrl}
+            className={`w-full sm:w-auto ${
+              pdfUrl
+                ? "bg-emerald-600 hover:bg-emerald-700"
+                : "bg-gray-300 cursor-not-allowed"
+            } text-white font-semibold px-6 py-3 rounded-full shadow-md`}
+          >
+            {isStartingYousign
+              ? "Avvio firma..."
+              : "Avvia firma digitale Yousign"}
+          </button>
         </div>
+
+        {(yousignStatus || yousignResult) && (
+          <div
+            className={`rounded-lg border p-4 text-sm ${
+              yousignStatus === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : "border-red-200 bg-red-50 text-red-900"
+            }`}
+          >
+            {yousignStatus === "success" ? (
+              <div className="space-y-2">
+                <p className="font-semibold">
+                  Richiesta Yousign creata correttamente.
+                </p>
+                {yousignResult?.signatureLink ? (
+                  <a
+                    href={yousignResult.signatureLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex text-emerald-800 underline"
+                  >
+                    Apri link firma
+                  </a>
+                ) : (
+                  <p>
+                    Yousign inviera la mail al firmatario appena il link sara
+                    disponibile.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="font-semibold">
+                Impossibile avviare la richiesta Yousign.
+              </p>
+            )}
+          </div>
+        )}
+
+        {submitStatus && (
+          <div
+            className={`rounded-lg border p-4 text-sm font-semibold ${
+              submitStatus === "success"
+                ? "border-blue-200 bg-blue-50 text-blue-900"
+                : "border-red-200 bg-red-50 text-red-900"
+            }`}
+          >
+            {submitStatus === "success"
+              ? "Modulo inviato correttamente al backoffice."
+              : "Invio al backoffice non riuscito."}
+          </div>
+        )}
 
         {/* Anteprima PDF */}
         {pdfUrl && (
