@@ -1116,21 +1116,10 @@ const CompilerAdesione = () => {
                 <p className="font-semibold">
                   Richiesta Yousign creata correttamente.
                 </p>
-                {yousignResult?.signatureLink ? (
-                  <a
-                    href={yousignResult.signatureLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex text-emerald-800 underline"
-                  >
-                    Apri link firma
-                  </a>
-                ) : (
-                  <p>
-                    Yousign inviera la mail al firmatario appena il link sara
-                    disponibile.
-                  </p>
-                )}
+                <p>
+                  Yousign inviera la mail al firmatario per completare firma e
+                  OTP.
+                </p>
               </div>
             ) : (
               <p className="font-semibold">
