@@ -118,20 +118,43 @@ const CompilerAdesione = () => {
     dataContratto: "",
   });
 
-  const [files, setFiles] = useState([]);
   const [filePreviews, setFilePreviews] = useState([]);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfVersion, setPdfVersion] = useState(0);
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [yousignStatus, setYousignStatus] = useState(null);
   const [isStartingYousign, setIsStartingYousign] = useState(false);
   const [yousignResult, setYousignResult] = useState(null);
 
-  const API_CLIENTE = "https://api.davveroo.it/api/email/attivazione";
   const API_YOUSIGN =
     import.meta.env.VITE_YOUSIGN_API_URL ||
     "https://api.davveroo.it/api/yousign-signature-request";
+
+  const REQUIRED_FIELDS = [
+    ["ragioneSociale", "Ragione sociale"],
+    ["partitaIva", "Partita IVA"],
+    ["codiceSdi", "Codice SDI"],
+    ["pec", "PEC"],
+    ["codiceFiscaleAzienda", "Codice fiscale azienda"],
+    ["sedeCommerciale", "Sede commerciale"],
+    ["citta", "Citta"],
+    ["provincia", "Provincia"],
+    ["cellulareAzienda", "Cellulare azienda"],
+    ["mailAzienda", "Mail azienda"],
+    ["settoreMerceologico", "Settore merceologico"],
+    ["iban", "IBAN"],
+    ["legaleNomeCognome", "Nome e cognome legale rappresentante"],
+    ["legaleCodiceFiscale", "Codice fiscale legale rappresentante"],
+    ["legaleIndirizzo", "Indirizzo legale rappresentante"],
+    ["legaleCellulare", "Cellulare legale rappresentante"],
+    ["legaleMail", "Mail legale rappresentante"],
+    ["descrizioneServizio", "Descrizione servizio"],
+    ["agenteNomeCognome", "Nome e cognome agente"],
+    ["agenteMail", "Mail agente"],
+    ["agenteCellulare", "Cellulare agente"],
+    ["email_pmanager", "Email P. Manager"],
+    ["dataContratto", "Data contratto"],
+    ["note", "Note"],
+  ];
 
   const convertFileToBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -167,6 +190,48 @@ const CompilerAdesione = () => {
   const handleCheckboxChange = (field) => (e) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.checked }));
 
+  const focusField = (field) => {
+    document.querySelector(`[name="${field}"]`)?.focus();
+  };
+
+  const validateRequiredForm = () => {
+    const missingField = REQUIRED_FIELDS.find(
+      ([field]) => !String(formData[field] ?? "").trim()
+    );
+
+    if (missingField) {
+      const [field, label] = missingField;
+      alert(`Compila il campo obbligatorio: ${label}.`);
+      focusField(field);
+      return false;
+    }
+
+    const hasCanone = CANONE_OPTIONS.some(({ field }) => formData[field]);
+    if (!hasCanone) {
+      alert("Seleziona almeno un canone.");
+      return false;
+    }
+
+    const hasSoftposProfile = SOFTPOS_PROFILES.some(
+      ({ field }) => formData[field]
+    );
+    if (!hasSoftposProfile) {
+      alert("Seleziona almeno un profilo SoftPOS.");
+      return false;
+    }
+
+    if (
+      formData.codiceScontoPrimoAnnoEnabled === true &&
+      !formData.codiceScontoPrimoAnno.trim()
+    ) {
+      alert("Inserisci il codice sconto primo anno.");
+      focusField("codiceScontoPrimoAnno");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFileChange = (event, sectionName) => {
     const selectedFiles = Array.from(event.target.files || []);
     selectedFiles.forEach((file) => {
@@ -174,7 +239,6 @@ const CompilerAdesione = () => {
         value: sectionName,
         enumerable: true,
       });
-      setFiles((prev) => [...prev, file]);
 
       if (file.type.startsWith("image/")) {
         const r = new FileReader();
@@ -199,38 +263,16 @@ const CompilerAdesione = () => {
   };
 
   const removeFile = (index) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
     setFilePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
-  // Riepilogo prezzi per EMAIL (non per pagina 1 del PDF)
-  const buildPrezziServiziText = () => {
-    const lines = [];
-    CANONE_OPTIONS.forEach(({ field, label, value }) => {
-      if (formData[field] === true) lines.push(`${label}: ${value}`);
-    });
-
-    SOFTPOS_PROFILES.forEach((profile) => {
-      if (formData[profile.field] !== true) return;
-      lines.push(`SoftPOS ${profile.label}: ${profile.minimumPayout}`);
-    });
-
-    if (formData.codiceScontoPrimoAnnoEnabled === true) {
-      lines.push(
-        `Codice Sconto primo anno: ${
-          formData.codiceScontoPrimoAnno || "non specificato"
-        }`
-      );
-    }
-
-    return lines.join("\n");
-  };
-
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
+    if (!validateRequiredForm()) return;
+
     const existingPdfBytes = await fetch("/moduloadesionepartner.pdf").then(
       (res) => res.arrayBuffer()
     );
@@ -428,90 +470,9 @@ const CompilerAdesione = () => {
   const scaricaPdf = () =>
     pdfUrl && saveAs(pdfUrl, "modulo_adesione_expopay.pdf");
 
-  // ======= Invio backoffice =======
-  const getFileSize = (f) => f?.size ?? 0;
-  const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
-
-  async function handleSubmitToClient() {
-    if (!pdfUrl) return alert("Genera prima il PDF.");
-
-    const destinatario =
-      formData.agenteMail?.trim() ||
-      formData.personaleManagerMail?.trim() ||
-      formData.mailAzienda?.trim();
-
-    if (!destinatario) {
-      alert(
-        "Inserisci almeno una mail destinataria (mail azienda o mail AGENTE) prima di inviare."
-      );
-      return;
-    }
-
-    setSubmitStatus(null);
-    setIsSubmitting(true);
-    try {
-      const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
-      const pdfFile = new File([pdfBlob], "modulo_adesione_expopay.pdf", {
-        type: "application/pdf",
-      });
-
-      const allFiles = [pdfFile, ...files];
-      const totalBytes = allFiles.reduce((s, f) => s + getFileSize(f), 0);
-      if (totalBytes > MAX_TOTAL_BYTES)
-        throw new Error(
-          `Allegati troppo pesanti (${(totalBytes / 1024 / 1024).toFixed(
-            2
-          )} MB).`
-        );
-
-      const attachments = await Promise.all(
-        allFiles.map(async (file) => ({
-          filename: file.name,
-          base64: await convertFileToBase64(file),
-        }))
-      );
-
-      const prezziServizi = buildPrezziServiziText();
-      const prezziTextForEmail = prezziServizi
-        ? `\n\nPrezzi servizi selezionati:\n${prezziServizi}`
-        : "";
-
-      const payload = {
-        nome: formData.ragioneSociale?.trim() || "Senza nome",
-        email: formData.mailAzienda?.trim() || "",
-        telefono: formData.cellulareAzienda?.trim() || "",
-        email_pmanager: formData.email_pmanager?.trim() || "",
-        messaggio:
-          (formData.note ||
-            `Modulo di adesione Davveroo - servizio: ${
-              formData.descrizioneServizio || ""
-            }`) + prezziTextForEmail,
-        to: destinatario,
-        subject: "Attivazione DOJO",
-        attachments,
-      };
-
-      const res = await fetch(API_CLIENTE, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(`HTTP ${res.status} - ${text || "no body"}`);
-
-      setSubmitStatus("success");
-      alert("Email inviata correttamente.");
-    } catch (err) {
-      console.error(err);
-      setSubmitStatus("error");
-      alert(`Errore durante l'invio: ${err.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   async function handleStartYousignSignature() {
     if (!pdfUrl) return alert("Genera prima il PDF.");
+    if (!validateRequiredForm()) return;
 
     const signerEmail =
       formData.legaleMail?.trim() || formData.mailAzienda?.trim();
@@ -613,6 +574,7 @@ const CompilerAdesione = () => {
               placeholder="Ragione sociale"
               value={formData.ragioneSociale}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -620,6 +582,7 @@ const CompilerAdesione = () => {
               placeholder="Partita IVA"
               value={formData.partitaIva}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -627,13 +590,16 @@ const CompilerAdesione = () => {
               placeholder="Codice SDI"
               value={formData.codiceSdi}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="email"
               name="pec"
               placeholder="PEC"
               value={formData.pec}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -641,6 +607,7 @@ const CompilerAdesione = () => {
               placeholder="Codice fiscale (se diverso)"
               value={formData.codiceFiscaleAzienda}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -648,6 +615,7 @@ const CompilerAdesione = () => {
               placeholder="Sede commerciale"
               value={formData.sedeCommerciale}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -655,6 +623,7 @@ const CompilerAdesione = () => {
               placeholder="Città"
               value={formData.citta}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -662,20 +631,25 @@ const CompilerAdesione = () => {
               placeholder="Provincia"
               value={formData.provincia}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="tel"
               name="cellulareAzienda"
               placeholder="Cellulare"
               value={formData.cellulareAzienda}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="email"
               name="mailAzienda"
               placeholder="Mail"
               value={formData.mailAzienda}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -683,6 +657,7 @@ const CompilerAdesione = () => {
               placeholder="Settore merceologico"
               value={formData.settoreMerceologico}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
             />
             <input
@@ -690,6 +665,7 @@ const CompilerAdesione = () => {
               placeholder="IBAN"
               value={formData.iban}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
             />
           </div>
@@ -706,6 +682,7 @@ const CompilerAdesione = () => {
               placeholder="Nome e cognome"
               value={formData.legaleNomeCognome}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -713,6 +690,7 @@ const CompilerAdesione = () => {
               placeholder="Codice fiscale"
               value={formData.legaleCodiceFiscale}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
@@ -720,6 +698,7 @@ const CompilerAdesione = () => {
               placeholder="Indirizzo di residenza"
               value={formData.legaleIndirizzo}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base sm:col-span-2"
             />
             <input
@@ -728,13 +707,16 @@ const CompilerAdesione = () => {
               placeholder="Cellulare OTP es. +393272485716"
               value={formData.legaleCellulare}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="email"
               name="legaleMail"
               placeholder="Mail"
               value={formData.legaleMail}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
           </div>
@@ -828,6 +810,7 @@ const CompilerAdesione = () => {
                 placeholder="Inserisci codice sconto primo anno"
                 value={formData.codiceScontoPrimoAnno}
                 onChange={handleChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               />
             )}
@@ -838,6 +821,7 @@ const CompilerAdesione = () => {
             placeholder="Descrizione servizio (verrà inserita nell'area 'DESCRIZIONE SERVIZIO' del modulo)"
             value={formData.descrizioneServizio}
             onChange={handleChange}
+            required
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
         </div>
@@ -853,27 +837,34 @@ const CompilerAdesione = () => {
               placeholder="Nome e cognome"
               value={formData.agenteNomeCognome}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="email"
               name="agenteMail"
               placeholder="Mail"
               value={formData.agenteMail}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="tel"
               name="agenteCellulare"
               placeholder="Cellulare"
               value={formData.agenteCellulare}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
             <input
+              type="email"
               name="email_pmanager"
               placeholder="Email P. Manager (endpoint)"
               value={formData.email_pmanager}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
           </div>
@@ -889,6 +880,7 @@ const CompilerAdesione = () => {
             placeholder="Data (es. 18/11/2025)"
             value={formData.dataContratto}
             onChange={handleChange}
+            required
             className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
           />
           <textarea
@@ -896,6 +888,7 @@ const CompilerAdesione = () => {
             placeholder="Note"
             value={formData.note}
             onChange={handleChange}
+            required
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
         </div>
@@ -1081,14 +1074,6 @@ const CompilerAdesione = () => {
           </button>
           <button
             type="button"
-            onClick={handleSubmitToClient}
-            disabled={isSubmitting}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-full shadow-md"
-          >
-            {isSubmitting ? "Invio in corso..." : "Invia a Backoffice"}
-          </button>
-          <button
-            type="button"
             onClick={handleStartYousignSignature}
             disabled={isStartingYousign || !pdfUrl}
             className={`w-full sm:w-auto ${
@@ -1126,20 +1111,6 @@ const CompilerAdesione = () => {
                 Impossibile avviare la richiesta Yousign.
               </p>
             )}
-          </div>
-        )}
-
-        {submitStatus && (
-          <div
-            className={`rounded-lg border p-4 text-sm font-semibold ${
-              submitStatus === "success"
-                ? "border-blue-200 bg-blue-50 text-blue-900"
-                : "border-red-200 bg-red-50 text-red-900"
-            }`}
-          >
-            {submitStatus === "success"
-              ? "Modulo inviato correttamente al backoffice."
-              : "Invio al backoffice non riuscito."}
           </div>
         )}
 
