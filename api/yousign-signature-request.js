@@ -38,9 +38,13 @@ function splitFullName(fullName) {
   return { firstName, lastName };
 }
 
-function getSignatureFields(documentId) {
+function getSignatureFields(documentId, requestedFields) {
   const configured = process.env.YOUSIGN_SIGNATURE_FIELDS;
-  const fields = configured ? JSON.parse(configured) : DEFAULT_SIGNATURE_FIELDS;
+  const fields = Array.isArray(requestedFields)
+    ? requestedFields
+    : configured
+      ? JSON.parse(configured)
+      : DEFAULT_SIGNATURE_FIELDS;
 
   return fields.map((field) => ({
     type: "signature",
@@ -173,8 +177,14 @@ export default async function handler(req, res) {
         locale: signer.locale || "it",
       },
       signature_level: "electronic_signature",
-      signature_authentication_mode: "no_otp",
-      fields: getSignatureFields(uploadedDocument.id),
+      signature_authentication_mode:
+        signer.signatureAuthenticationMode ||
+        signatureRequest?.signatureAuthenticationMode ||
+        "no_otp",
+      fields: getSignatureFields(
+        uploadedDocument.id,
+        signatureRequest?.signatureFields
+      ),
     };
 
     if (signer.phoneNumber) {

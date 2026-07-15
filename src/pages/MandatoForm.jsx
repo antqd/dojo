@@ -47,6 +47,8 @@ export default function MandatoForm() {
   // ===== INVIO BACKOFFICE =====
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
+  const [isStartingYousign, setIsStartingYousign] = useState(false);
+  const [yousignStatus, setYousignStatus] = useState(null);
 
   // ===== FIRME: Expo energia + Procacciatore =====
   const [isSigExpoActive, setIsSigExpoActive] = useState(false);
@@ -54,6 +56,10 @@ export default function MandatoForm() {
 
   const sigExpoRef = useRef(null);
   const sigProcRef = useRef(null);
+
+  const API_YOUSIGN =
+    import.meta.env.VITE_YOUSIGN_API_URL ||
+    "https://api.davveroo.it/api/yousign-signature-request";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,6 +76,17 @@ export default function MandatoForm() {
     if (!ref?.current || ref.current.isEmpty()) return null;
     return ref.current.getTrimmedCanvas().toDataURL("image/png");
   };
+
+  const normalizePhoneForOtp = (phone) => {
+    const compact = String(phone || "").replace(/[\s().-]/g, "");
+    if (!compact) return "";
+    if (compact.startsWith("+")) return compact;
+    if (compact.startsWith("00")) return `+${compact.slice(2)}`;
+    if (/^3\d{8,10}$/.test(compact)) return `+39${compact}`;
+    return compact;
+  };
+
+  const isValidOtpPhone = (phone) => /^\+[1-9]\d{7,14}$/.test(phone);
 
   // ====== COORDINATE CAMPI ======
   const FIELDS = useMemo(
@@ -291,6 +308,105 @@ export default function MandatoForm() {
       alert(`Errore durante l'invio: ${err.message}`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleStartYousignSignature = async () => {
+    if (!pdfUrl) return alert("Genera prima il PDF.");
+
+    const signerName =
+      formData.rappresentanteLegale?.trim() ||
+      formData.ragioneSociale?.trim();
+    const signerEmail = formData.email?.trim();
+    const signerPhoneNumber = normalizePhoneForOtp(
+      formData.cellulare || formData.telefono,
+    );
+
+    if (!signerName) {
+      alert("Inserisci il rappresentante legale o la ragione sociale.");
+      return;
+    }
+
+    if (!signerEmail) {
+      alert("Inserisci l'email del firmatario.");
+      return;
+    }
+
+    if (!isValidOtpPhone(signerPhoneNumber)) {
+      alert(
+        "Inserisci il cellulare del firmatario in formato internazionale, ad esempio +393272485716.",
+      );
+      return;
+    }
+
+    setYousignStatus(null);
+    setIsStartingYousign(true);
+
+    try {
+      const pdfBlob = await fetch(pdfUrl).then((res) => res.blob());
+      const pdfFile = new File(
+        [pdfBlob],
+        "mandatoenergyplanner_compilato.pdf",
+        { type: "application/pdf" },
+      );
+
+      const payload = {
+        document: {
+          filename: pdfFile.name,
+          mimeType: pdfFile.type,
+          base64: await convertFileToBase64(pdfFile),
+        },
+        signer: {
+          fullName: signerName,
+          email: signerEmail,
+          phoneNumber: signerPhoneNumber,
+          locale: "it",
+          signatureAuthenticationMode: "otp_sms",
+        },
+        signatureRequest: {
+          name: `Mandato Energy Planner - ${
+            formData.ragioneSociale?.trim() || signerName
+          }`,
+          externalId: formData.partitaIva?.trim() || undefined,
+          deliveryMode: "email",
+          template: "mandato-energy-planner",
+          signatureFields: [
+            { page: 5, x: 60, y: 390, width: 190, height: 35 },
+            { page: 5, x: 345, y: 390, width: 190, height: 35 },
+            { page: 5, x: 60, y: 140, width: 190, height: 35 },
+            { page: 5, x: 345, y: 140, width: 190, height: 35 },
+          ],
+        },
+        metadata: {
+          template: "mandato-energy-planner",
+          ragioneSociale: formData.ragioneSociale?.trim() || "",
+          partitaIva: formData.partitaIva?.trim() || "",
+          codiceFiscale: formData.codiceFiscale?.trim() || "",
+        },
+      };
+
+      const res = await fetch(API_YOUSIGN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const details = data?.step ? ` (${data.step})` : "";
+        throw new Error(
+          data?.error ? `${data.error}${details}` : `HTTP ${res.status}`,
+        );
+      }
+
+      setYousignStatus("success");
+      alert("Richiesta di firma digitale Yousign avviata.");
+    } catch (err) {
+      console.error("Errore Yousign:", err);
+      setYousignStatus("error");
+      alert(`Errore Yousign: ${err.message}`);
+    } finally {
+      setIsStartingYousign(false);
     }
   };
 
@@ -620,6 +736,21 @@ export default function MandatoForm() {
           >
             {isSubmitting ? "Invio in corso..." : "Invia a Backoffice"}
           </button>
+
+          <button
+            type="button"
+            onClick={handleStartYousignSignature}
+            disabled={isStartingYousign || !pdfUrl}
+            className={`w-full sm:w-auto ${
+              pdfUrl
+                ? "bg-emerald-600 hover:bg-emerald-700"
+                : "bg-gray-300 cursor-not-allowed"
+            } text-white font-semibold px-6 py-3 rounded-full shadow-md transition duration-200 transform hover:scale-105 disabled:transform-none`}
+          >
+            {isStartingYousign
+              ? "Avvio firma..."
+              : "Avvia firma digitale Yousign"}
+          </button>
         </div>
 
         {/* STATUS INVIO */}
@@ -631,6 +762,18 @@ export default function MandatoForm() {
         {submitStatus === "error" && (
           <div className="text-center text-red-600 font-semibold">
             Errore invio ❌ (controlla console)
+          </div>
+        )}
+
+        {yousignStatus === "success" && (
+          <div className="text-center text-emerald-700 font-semibold">
+            Richiesta Yousign creata. Il firmatario ricevera la mail per firma
+            e OTP.
+          </div>
+        )}
+        {yousignStatus === "error" && (
+          <div className="text-center text-red-600 font-semibold">
+            Errore avvio Yousign. Controlla i dati del firmatario.
           </div>
         )}
 
