@@ -11,6 +11,7 @@ import ContactForm from "./pages/ContactForm.jsx";
 import FormParterManager from "./pages/FormParterManager.jsx";
 import CompilerAdesione from "./pages/CompilerAdesione.jsx";
 import ComparazioneEstrattoAI from "./pages/ComparazioneEstrattoAI.jsx";
+import MandatoForm from "./pages/MandatoForm.jsx";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -21,6 +22,10 @@ createRoot(document.getElementById("root")).render(
         <Route path="/contact-form" element={<ContactForm />} />
         <Route path="/form-partner-manager" element={<FormParterManager />} />
         <Route path="/compileradesione" element={<CompilerAdesione />} />
+        <Route
+          path="/compilazione-mandato-energy-planner"
+          element={<MandatoForm />}
+        />
         <Route
           path="/comparazione-estratto-ai"
           element={<ComparazioneEstrattoAI />}

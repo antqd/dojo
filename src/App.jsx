@@ -205,6 +205,13 @@ export default function App() {
                   >
                     Attiva Dojo
                   </Link>
+                  <Link
+                    to="/compilazione-mandato-energy-planner"
+                    className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
+                    onClick={closeAllMenus}
+                  >
+                    Mandato Energy Planner
+                  </Link>
                   <a
                     href="#chi-siamo"
                     className="block px-4 py-2 text-[#0B2B23] hover:bg-[#F0FAF7]"
@@ -380,6 +387,13 @@ export default function App() {
                     onClick={closeAllMenus}
                   >
                     Attiva Dojo
+                  </Link>
+                  <Link
+                    to="/compilazione-mandato-energy-planner"
+                    className="py-1"
+                    onClick={closeAllMenus}
+                  >
+                    Mandato Energy Planner
                   </Link>
                   <a href="#chi-siamo" className="py-1" onClick={closeAllMenus}>
                     Chi siamo
