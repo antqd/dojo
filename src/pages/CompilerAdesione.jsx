@@ -704,7 +704,7 @@ const CompilerAdesione = () => {
             <input
               type="tel"
               name="legaleCellulare"
-              placeholder="Cellulare OTP es. +393272485716"
+              placeholder="Cellulare"
               value={formData.legaleCellulare}
               onChange={handleChange}
               required
