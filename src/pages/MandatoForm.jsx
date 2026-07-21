@@ -49,6 +49,10 @@ export default function MandatoForm() {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isStartingYousign, setIsStartingYousign] = useState(false);
   const [yousignStatus, setYousignStatus] = useState(null);
+  const [yousignSignatureRequestId, setYousignSignatureRequestId] =
+    useState(null);
+  const [isSendingSignedDocument, setIsSendingSignedDocument] = useState(false);
+  const [signedDocumentStatus, setSignedDocumentStatus] = useState(null);
 
   // ===== FIRME: Expo energia + Procacciatore =====
   const [isSigExpoActive, setIsSigExpoActive] = useState(false);
@@ -60,6 +64,9 @@ export default function MandatoForm() {
   const API_YOUSIGN =
     import.meta.env.VITE_YOUSIGN_API_URL ||
     "https://api.davveroo.it/api/yousign-signature-request";
+  const API_YOUSIGN_SEND_SIGNED_DOCUMENT =
+    import.meta.env.VITE_YOUSIGN_SEND_SIGNED_DOCUMENT_URL ||
+    "https://api.davveroo.it/api/yousign-send-signed-document";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -340,6 +347,8 @@ export default function MandatoForm() {
     }
 
     setYousignStatus(null);
+    setYousignSignatureRequestId(null);
+    setSignedDocumentStatus(null);
     setIsStartingYousign(true);
 
     try {
@@ -399,6 +408,12 @@ export default function MandatoForm() {
         );
       }
 
+      setYousignSignatureRequestId(
+        data?.signatureRequestId ||
+          data?.signature_request_id ||
+          data?.id ||
+          null
+      );
       setYousignStatus("success");
       alert("Richiesta di firma digitale Yousign avviata.");
     } catch (err) {
@@ -407,6 +422,45 @@ export default function MandatoForm() {
       alert(`Errore Yousign: ${err.message}`);
     } finally {
       setIsStartingYousign(false);
+    }
+  };
+
+  const handleSendSignedDocument = async () => {
+    if (!yousignSignatureRequestId) {
+      alert("Avvia prima una richiesta Yousign.");
+      return;
+    }
+
+    setSignedDocumentStatus(null);
+    setIsSendingSignedDocument(true);
+
+    try {
+      const res = await fetch(API_YOUSIGN_SEND_SIGNED_DOCUMENT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureRequestId: yousignSignatureRequestId }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error(
+            `Documento non ancora completato su Yousign${
+              data?.status ? `: ${data.status}` : ""
+            }.`
+          );
+        }
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+
+      setSignedDocumentStatus("success");
+      alert("Documento firmato inviato a contratti@davveroo.it.");
+    } catch (err) {
+      console.error("Errore invio documento firmato:", err);
+      setSignedDocumentStatus("error");
+      alert(`Errore invio documento firmato: ${err.message}`);
+    } finally {
+      setIsSendingSignedDocument(false);
     }
   };
 
@@ -766,9 +820,29 @@ export default function MandatoForm() {
         )}
 
         {yousignStatus === "success" && (
-          <div className="text-center text-emerald-700 font-semibold">
-            Richiesta Yousign creata. Il firmatario ricevera la mail per firma
-            e OTP.
+          <div className="space-y-3 text-center text-emerald-700 font-semibold">
+            <p>
+              Richiesta Yousign creata. Il firmatario ricevera la mail per
+              firma e OTP.
+            </p>
+            {yousignSignatureRequestId && (
+              <button
+                type="button"
+                onClick={handleSendSignedDocument}
+                disabled={isSendingSignedDocument}
+                className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                {isSendingSignedDocument
+                  ? "Invio documento..."
+                  : "Invia documento firmato a contratti"}
+              </button>
+            )}
+            {signedDocumentStatus === "success" && (
+              <p>Documento firmato inviato a contratti@davveroo.it.</p>
+            )}
+            {signedDocumentStatus === "error" && (
+              <p className="text-red-600">Invio documento firmato non riuscito.</p>
+            )}
           </div>
         )}
         {yousignStatus === "error" && (

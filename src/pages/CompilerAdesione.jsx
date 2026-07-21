@@ -124,10 +124,17 @@ const CompilerAdesione = () => {
   const [yousignStatus, setYousignStatus] = useState(null);
   const [isStartingYousign, setIsStartingYousign] = useState(false);
   const [yousignResult, setYousignResult] = useState(null);
+  const [yousignSignatureRequestId, setYousignSignatureRequestId] =
+    useState(null);
+  const [isSendingSignedDocument, setIsSendingSignedDocument] = useState(false);
+  const [signedDocumentStatus, setSignedDocumentStatus] = useState(null);
 
   const API_YOUSIGN =
     import.meta.env.VITE_YOUSIGN_API_URL ||
     "https://api.davveroo.it/api/yousign-signature-request";
+  const API_YOUSIGN_SEND_SIGNED_DOCUMENT =
+    import.meta.env.VITE_YOUSIGN_SEND_SIGNED_DOCUMENT_URL ||
+    "https://api.davveroo.it/api/yousign-send-signed-document";
 
   const REQUIRED_FIELDS = [
     ["ragioneSociale", "Ragione sociale"],
@@ -497,6 +504,8 @@ const CompilerAdesione = () => {
 
     setYousignStatus(null);
     setYousignResult(null);
+    setYousignSignatureRequestId(null);
+    setSignedDocumentStatus(null);
     setIsStartingYousign(true);
 
     try {
@@ -544,6 +553,12 @@ const CompilerAdesione = () => {
       }
 
       setYousignResult(data);
+      setYousignSignatureRequestId(
+        data?.signatureRequestId ||
+          data?.signature_request_id ||
+          data?.id ||
+          null
+      );
       setYousignStatus("success");
       alert("Richiesta di firma digitale Yousign avviata.");
     } catch (err) {
@@ -552,6 +567,45 @@ const CompilerAdesione = () => {
       alert(`Errore Yousign: ${err.message}`);
     } finally {
       setIsStartingYousign(false);
+    }
+  }
+
+  async function handleSendSignedDocument() {
+    if (!yousignSignatureRequestId) {
+      alert("Avvia prima una richiesta Yousign.");
+      return;
+    }
+
+    setSignedDocumentStatus(null);
+    setIsSendingSignedDocument(true);
+
+    try {
+      const res = await fetch(API_YOUSIGN_SEND_SIGNED_DOCUMENT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureRequestId: yousignSignatureRequestId }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error(
+            `Documento non ancora completato su Yousign${
+              data?.status ? `: ${data.status}` : ""
+            }.`
+          );
+        }
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+
+      setSignedDocumentStatus("success");
+      alert("Documento firmato inviato a contratti@davveroo.it.");
+    } catch (err) {
+      console.error("Errore invio documento firmato:", err);
+      setSignedDocumentStatus("error");
+      alert(`Errore invio documento firmato: ${err.message}`);
+    } finally {
+      setIsSendingSignedDocument(false);
     }
   }
 
@@ -1105,6 +1159,28 @@ const CompilerAdesione = () => {
                   Yousign inviera la mail al firmatario per completare firma e
                   OTP.
                 </p>
+                {yousignSignatureRequestId && (
+                  <button
+                    type="button"
+                    onClick={handleSendSignedDocument}
+                    disabled={isSendingSignedDocument}
+                    className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                  >
+                    {isSendingSignedDocument
+                      ? "Invio documento..."
+                      : "Invia documento firmato a contratti"}
+                  </button>
+                )}
+                {signedDocumentStatus === "success" && (
+                  <p className="font-semibold text-emerald-800">
+                    Documento firmato inviato a contratti@davveroo.it.
+                  </p>
+                )}
+                {signedDocumentStatus === "error" && (
+                  <p className="font-semibold text-red-700">
+                    Invio documento firmato non riuscito.
+                  </p>
+                )}
               </div>
             ) : (
               <p className="font-semibold">
