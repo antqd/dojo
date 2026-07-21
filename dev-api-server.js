@@ -78,6 +78,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      req.rawBody = body;
       req.body = body ? JSON.parse(body) : {};
       console.log(`[API] ${req.method} /api/${apiName}`);
 
