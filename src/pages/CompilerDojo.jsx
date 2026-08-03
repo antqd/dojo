@@ -23,32 +23,25 @@ const CompilerDojo = () => {
 
   // ======= Stato form e allegati =======
   const [formData, setFormData] = useState({
-    partnermanager: "",
-    email_pmanager: "",
-    attualeGestore: "",
-    email: "",
+    partitaIva: "",
+    codiceFiscale: "",
+    codiceAteco: "",
+    mcc: "",
     iban: "",
-    cell: "",
     ragione: "",
-    indirizzo: "",
-    indirizzo2: "",
-    indirizzo3: "",
+    sedeLegale: "",
+    sedeOperativa: "",
+    numeroPos: "",
+    agente: "",
     debito: "",
     credito: "",
-    business: "",
-    marchio: "",
+    bancomat: "",
     info: "",
     canonedojo: "",
-    scontrinoMedio: "",
-    scontrinoMassimo: "",
     transatoAnnuo: "",
-    // NUOVE CARTE
-    amex: "",
-    stf: "",
-    // RANGE VOLUME
-    volume0_50k: false,
-    volume50_150k: false,
-    volume150_250k: false,
+    propostaCredito: false,
+    propostaBancomat: false,
+    propostaDebito: false,
   });
 
   const [files, setFiles] = useState([]);
@@ -137,16 +130,23 @@ const CompilerDojo = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const existingPdfBytes = await fetch("/moduloDojo.pdf").then((res) =>
-      res.arrayBuffer()
-    );
+    const templateResponse = await fetch("/moduloDojo.pdf");
+    if (!templateResponse.ok) {
+      throw new Error("Template moduloDojo.pdf non disponibile.");
+    }
+    const existingPdfBytes = await templateResponse.arrayBuffer();
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
     // Font standard
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const page = pdfDoc.getPages()[0];
+    const pages = pdfDoc.getPages();
+    if (pages.length < 2) {
+      throw new Error("Il template moduloDojo.pdf deve contenere due pagine.");
+    }
+    const page = pages[0];
+    const approvalPage = pages[1];
 
     const drawText = (text, x, y, size = 12, whichFont = font) => {
       page.drawText(sanitizeForWinAnsi(text), {
@@ -157,6 +157,22 @@ const CompilerDojo = () => {
         color: rgb(0, 0, 0),
       });
     };
+
+    function drawTextFitted(
+      text,
+      x,
+      y,
+      { size = 11, maxWidth = 252, minSize = 7, whichFont = font } = {}
+    ) {
+      const safeText = sanitizeForWinAnsi(text);
+      if (!safeText) return;
+      const naturalWidth = whichFont.widthOfTextAtSize(safeText, size);
+      const fittedSize =
+        naturalWidth > maxWidth
+          ? Math.max(minSize, (size * maxWidth) / naturalWidth)
+          : size;
+      drawText(safeText, x, y, fittedSize, whichFont);
+    }
 
     // Testo multi-linea con wrapping e \n
     const drawMultilineText = (
@@ -206,79 +222,100 @@ const CompilerDojo = () => {
       return cursorY;
     };
 
-    // ========= COMPILAZIONE PDF =========
-    // campi esistenti
-    drawText(formData.partnermanager, 470, 1323, 21);
-    drawText(formData.email_pmanager, 470, 1290, 18);
-    drawText(formData.ragione, 310, 1170, 20);
-    drawText(formData.attualeGestore, 100, 880, 18);
-    drawText(formData.cell, 130, 1125, 20);
-    drawText(formData.email, 470, 1125, 20);
-    drawText(formData.iban, 125, 1080, 20);
-    drawMultilineText(formData.indirizzo || "", 260, 1200, {
-      size: 15,
-      maxWidth: 500,
-      lineHeight: 18,
+    // Coordinate del template A4 aggiornato (origine pdf-lib: basso-sinistra).
+    const merchantFields = [
+      ["ragione", 721],
+      ["partitaIva", 673],
+      ["codiceFiscale", 625],
+      ["codiceAteco", 577],
+      ["mcc", 529],
+      ["sedeLegale", 481],
+      ["sedeOperativa", 433],
+      ["iban", 385],
+      ["transatoAnnuo", 337],
+      ["numeroPos", 289],
+      ["agente", 241],
+    ];
+    merchantFields.forEach(([field, y]) =>
+      drawTextFitted(formData[field], 306, y)
+    );
+
+    drawMultilineText(formData.info, 306, 197, {
+      size: 10,
+      maxWidth: 252,
+      lineHeight: 12,
     });
-    drawMultilineText(formData.indirizzo2 || "", 260, 1030, {
-      size: 20,
-      maxWidth: 300,
-      lineHeight: 18,
-    });
-    drawMultilineText(formData.indirizzo3 || "", 260, 1000, {
-      size: 20,
-      maxWidth: 300,
-      lineHeight: 18,
-    });
-    drawText(formData.debito, 600, 690, 19);
-    drawText(formData.credito, 600, 730, 19);
-    drawText(formData.business, 600, 650, 19);
-    drawText(formData.amex, 600, 610, 18);
-    drawText(formData.stf, 520, 573, 18);
-    if (formData.volume0_50k) drawText("X", 55, 767, 19);
-    if (formData.volume50_150k) drawText("X", 55, 688, 19);
-    if (formData.volume150_250k) drawText("X", 55, 605, 19);
-    drawText(formData.marchio, 190, 1240, 20);
-    drawMultilineText(formData.info || "", 55, 375, {
-      size: 18,
-      maxWidth: 590,
-      lineHeight: 18,
+    drawTextFitted(formData.canonedojo, 430, 151, {
+      size: 11,
+      maxWidth: 72,
+      whichFont: fontBold,
     });
 
-    // nuovi campi
-    drawText(formData.canonedojo, 600, 770, 18);
-    drawText(formData.scontrinoMedio, 645, 510, 18);
-    drawText(formData.scontrinoMassimo, 645, 478, 18);
-    drawText(formData.transatoAnnuo, 320, 915, 18);
-  
+    const proposalRows = [
+      ["propostaCredito", "credito", 124],
+      ["propostaBancomat", "bancomat", 98],
+      ["propostaDebito", "debito", 72],
+    ];
+    proposalRows.forEach(([checkField, valueField, y]) => {
+      if (formData[checkField]) drawText("X", 28, y, 11, fontBold);
+      drawTextFitted(formData[valueField], 55, y, {
+        size: 10,
+        maxWidth: 28,
+        minSize: 7,
+      });
+    });
+
+    const drawApprovalText = (text, x, y, size = 11, whichFont = font) => {
+      approvalPage.drawText(sanitizeForWinAnsi(text), {
+        x,
+        y,
+        size,
+        font: whichFont,
+        color: rgb(0, 0, 0),
+      });
+    };
 
     // Firme
     const firma1 = getFirmaImage();
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      page.drawImage(png, { x: 485, y: 125, width: 180, height: 50 });
+      drawApprovalText("Firma del richiedente", 325, 148, 10, fontBold);
+      approvalPage.drawImage(png, { x: 325, y: 82, width: 190, height: 55 });
     }
-    const firma2 = sigCanvasRef2.current
-      ?.getTrimmedCanvas()
-      .toDataURL("image/png");
+    const firma2 =
+      sigCanvasRef2.current && !sigCanvasRef2.current.isEmpty()
+        ? sigCanvasRef2.current.getTrimmedCanvas().toDataURL("image/png")
+        : null;
     if (firma2) {
       const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
       const png2 = await pdfDoc.embedPng(bytes2);
-      page.drawImage(png2, { x: 85, y: 125, width: 180, height: 50 });
+      drawApprovalText("Firma agente / Partner Manager", 55, 148, 10, fontBold);
+      approvalPage.drawImage(png2, { x: 55, y: 82, width: 190, height: 55 });
     }
 
     // Salva e mostra anteprima
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
-    setPdfUrl(url);
+    setPdfUrl((previousUrl) => {
+      if (previousUrl) URL.revokeObjectURL(previousUrl);
+      return url;
+    });
   };
 
   const scaricaPdf = () => pdfUrl && saveAs(pdfUrl, "modulo_compilato.pdf");
 
+  const handleGeneratePdf = async () => {
+    try {
+      await generaPdfPreview();
+    } catch (error) {
+      console.error("Errore generazione PDF:", error);
+      alert(`Impossibile generare il PDF: ${error.message}`);
+    }
+  };
+
   // ======= Invio backoffice =======
-  const getFileSize = (f) => f?.size ?? 0;
   const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 
 async function handleSubmitToClient() {
@@ -299,7 +336,7 @@ async function handleSubmitToClient() {
     const allFiles = [pdfFile, ...files];
     const totalBytes = allFiles.reduce((s, f) => s + (f?.size ?? 0), 0);
 
-    if (totalBytes > 8 * 1024 * 1024) {
+    if (totalBytes > MAX_TOTAL_BYTES) {
       throw new Error(
         `Allegati troppo pesanti (${(totalBytes / 1024 / 1024).toFixed(2)} MB)`
       );
@@ -317,26 +354,22 @@ async function handleSubmitToClient() {
 MODULO ATTIVAZIONE DOJO
 
 Ragione sociale: ${formData.ragione || "-"}
-Marchio: ${formData.marchio || "-"}
-Email: ${formData.email || "-"}
-Telefono: ${formData.cell || "-"}
+P.IVA: ${formData.partitaIva || "-"}
+Codice fiscale: ${formData.codiceFiscale || "-"}
+Codice ATECO: ${formData.codiceAteco || "-"}
+MCC: ${formData.mcc || "-"}
+Sede legale: ${formData.sedeLegale || "-"}
+Sede operativa: ${formData.sedeOperativa || "-"}
 IBAN: ${formData.iban || "-"}
-
-Partner Manager: ${formData.partnermanager || "-"}
-Email Partner Manager: ${formData.email_pmanager || "-"}
-
-Attuale gestore: ${formData.attualeGestore || "-"}
-
-Carte:
-Amex: ${formData.amex || "-"}
-STF: ${formData.stf || "-"}
-
-Range di Volume:
-0-50k: ${formData.volume0_50k ? "SI" : "NO"}
-50k-150k: ${formData.volume50_150k ? "SI" : "NO"}
-150k-250k: ${formData.volume150_250k ? "SI" : "NO"}
-
 Transato Annuo: ${formData.transatoAnnuo || "-"}
+Numero POS: ${formData.numeroPos || "-"}
+Agente: ${formData.agente || "-"}
+
+Proposta:
+Canone mensile: ${formData.canonedojo || "-"}
+Carte di credito: ${formData.propostaCredito ? formData.credito || "SI" : "NO"}
+Bancomat: ${formData.propostaBancomat ? formData.bancomat || "SI" : "NO"}
+Carte di debito: ${formData.propostaDebito ? formData.debito || "SI" : "NO"}
 
 Note:
 ${formData.info || "-"}
@@ -345,9 +378,8 @@ ${formData.info || "-"}
     const payload = {
       // campi "umani"
       nome: formData.ragione?.trim() || "Senza nome",
-      email: formData.email?.trim() || "",
-      telefono: formData.cell?.trim() || "",
-      email_pmanager: formData.email_pmanager?.trim() || "",
+      email: "",
+      telefono: "",
 
       // corpo email
       messaggio: messaggioEmail,
@@ -390,216 +422,76 @@ ${formData.info || "-"}
           Compilazione modulo PDF
         </h2>
 
-        {/* Dati principali */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <input
-            name="ragione"
-            placeholder="Ragione Sociale"
-            value={formData.ragione}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="marchio"
-            placeholder="Marchio/Insegna"
-            value={formData.marchio}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="attualeGestore"
-            placeholder="Attuale gestore"
-            value={formData.attualeGestore}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="cell"
-            placeholder="Cellulare"
-            value={formData.cell}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="iban"
-            placeholder="IBAN"
-            value={formData.iban}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="partnermanager"
-            placeholder="Partner Manager"
-            value={formData.partnermanager}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="email_pmanager"
-            placeholder="Email Partner Manager"
-            value={formData.email_pmanager}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-          />
-          <input
-            name="indirizzo"
-            placeholder="Indirizzo sede attivazione POS"
-            value={formData.indirizzo}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
-          />
-          <input
-            name="indirizzo2"
-            placeholder="Indirizzo 2"
-            value={formData.indirizzo2}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
-          />
-          <input
-            name="indirizzo3"
-            placeholder="Indirizzo 3"
-            value={formData.indirizzo3}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base sm:col-span-2"
-          />
+        {/* Dati presenti nel nuovo template */}
+        <div className="space-y-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Dati merchant
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {[
+              ["ragione", "Ragione Sociale"],
+              ["partitaIva", "P.IVA"],
+              ["codiceFiscale", "Codice Fiscale"],
+              ["codiceAteco", "Codice ATECO"],
+              ["mcc", "MCC"],
+              ["iban", "IBAN"],
+              ["sedeLegale", "Sede Legale"],
+              ["sedeOperativa", "Sede Operativa"],
+              ["transatoAnnuo", "Transato annuo stimato"],
+              ["numeroPos", "Numero POS"],
+              ["agente", "Agente"],
+            ].map(([name, placeholder]) => (
+              <input
+                key={name}
+                name={name}
+                placeholder={placeholder}
+                value={formData[name]}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Transato Annuo */}
-        <div className="space-y-2">
+        {/* Proposta */}
+        <div className="space-y-4">
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Transato Annuo
+            Proposta
           </h3>
           <input
-            name="transatoAnnuo"
-            placeholder="Transato annuo"
-            value={formData.transatoAnnuo}
+            name="canonedojo"
+            placeholder="Canone mensile in euro"
+            value={formData.canonedojo}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
           />
-        </div>
-
-        {/* Flat Rate e Proposta Dojo Custom */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Flat Rate */}
-          <div className="space-y-4">
-            <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-              Flat Rate
-            </h3>
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-sm sm:text-base">
-                <input
-                  type="checkbox"
-                  checked={formData.volume0_50k}
-                  onChange={handleCheckboxChange("volume0_50k")}
-                />
-                <span>0 - 50k (1%)</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm sm:text-base">
-                <input
-                  type="checkbox"
-                  checked={formData.volume50_150k}
-                  onChange={handleCheckboxChange("volume50_150k")}
-                />
-                <span>50k - 150k (0.9%)</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm sm:text-base">
-                <input
-                  type="checkbox"
-                  checked={formData.volume150_250k}
-                  onChange={handleCheckboxChange("volume150_250k")}
-                />
-                <span>150k - 250k (0.8%)</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Proposta Dojo Custom */}
-          <div className="space-y-4">
-            <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-              Proposta Dojo Custom
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            ["propostaCredito", "credito", "Carte di credito (%)"],
+            ["propostaBancomat", "bancomat", "Bancomat (%)"],
+            ["propostaDebito", "debito", "Carte di debito (%)"],
+          ].map(([checkName, valueName, label]) => (
+            <div key={checkName} className="flex items-center gap-3">
               <input
-                name="credito"
-                placeholder="Credito"
-                value={formData.credito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                type="checkbox"
+                checked={formData[checkName]}
+                onChange={handleCheckboxChange(checkName)}
+                aria-label={`Includi ${label}`}
               />
               <input
-                name="debito"
-                placeholder="Debito"
-                value={formData.debito}
+                name={valueName}
+                placeholder={label}
+                value={formData[valueName]}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="business"
-                placeholder="Business"
-                value={formData.business}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="amex"
-                placeholder="Amex"
-                value={formData.amex}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="stf"
-                placeholder="STF"
-                value={formData.stf}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-              />
-              <input
-                name="canonedojo"
-                placeholder="Canone mensile Dojo"
-                value={formData.canonedojo}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               />
             </div>
-          </div>
-        </div>
-
-        {/* Scontrini */}
-        <div className="space-y-2">
-          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Scontrini
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <input
-              name="scontrinoMedio"
-              placeholder="Scontrino medio"
-              value={formData.scontrinoMedio}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-            <input
-              name="scontrinoMassimo"
-              placeholder="Scontrino massimo"
-              value={formData.scontrinoMassimo}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            />
-          </div>
+          ))}
         </div>
 
         {/* Note */}
         <div className="space-y-2">
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
-            Note
+            Note e motivazioni fuori standard
           </h3>
           <textarea
             name="info"
@@ -846,11 +738,11 @@ ${formData.info || "-"}
             )}
           </div>
 
-          {/* Firma Partner Manager */}
+          {/* Firma agente / Partner Manager */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <p className="text-blue-900 font-semibold">
-                Firma Partner Manager
+                Firma agente / Partner Manager
               </p>
               <button
                 onClick={toggleSignature2}
@@ -897,7 +789,7 @@ ${formData.info || "-"}
         {/* Pulsanti */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
           <button
-            onClick={generaPdfPreview}
+            onClick={handleGeneratePdf}
             className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-full"
           >
             Genera Anteprima PDF
@@ -922,6 +814,17 @@ ${formData.info || "-"}
             {isSubmitting ? "Invio in corso..." : "Invia a Backoffice"}
           </button>
         </div>
+
+        {submitStatus === "success" && (
+          <p className="text-center text-green-700 font-medium">
+            Modulo inviato correttamente al backoffice.
+          </p>
+        )}
+        {submitStatus === "error" && (
+          <p className="text-center text-red-700 font-medium">
+            Invio non riuscito. Controlla i dati e riprova.
+          </p>
+        )}
 
         {/* Anteprima PDF */}
         {pdfUrl && (
