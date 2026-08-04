@@ -7,6 +7,27 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { saveAs } from "file-saver";
 import SignatureCanvas from "react-signature-canvas";
 
+const REQUIRED_FIELDS = [
+  ["ragione", "Ragione Sociale"],
+  ["partitaIva", "P.IVA"],
+  ["codiceFiscale", "Codice Fiscale"],
+  ["tipoAttivita", "Tipo Attività"],
+  ["mailMerchant", "Mail Merchant"],
+  ["sedeLegale", "Sede Legale"],
+  ["sedeOperativa", "Sede Operativa"],
+  ["iban", "IBAN"],
+  ["transatoAnnuo", "Transato annuo stimato"],
+  ["agente", "Agente"],
+  ["mailAgente", "Mail Agente"],
+  ["canonedojo", "Canone mensile"],
+  ["noleggioPos", "Noleggio POS"],
+  ["credito", "Carte Credit"],
+  ["amex", "AMEX"],
+  ["bancomat", "Bancomat"],
+  ["debito", "Carte Debit"],
+  ["info", "Note"],
+];
+
 const CompilerDojo = () => {
   // Sanifica caratteri non supportati da Helvetica (WinAnsi)
   const sanitizeForWinAnsi = (input) => {
@@ -25,23 +46,22 @@ const CompilerDojo = () => {
   const [formData, setFormData] = useState({
     partitaIva: "",
     codiceFiscale: "",
-    codiceAteco: "",
-    mcc: "",
+    tipoAttivita: "",
+    mailMerchant: "",
     iban: "",
     ragione: "",
     sedeLegale: "",
     sedeOperativa: "",
-    numeroPos: "",
     agente: "",
+    mailAgente: "",
     debito: "",
     credito: "",
     bancomat: "",
+    amex: "",
     info: "",
     canonedojo: "",
+    noleggioPos: "",
     transatoAnnuo: "",
-    propostaCredito: false,
-    propostaBancomat: false,
-    propostaDebito: false,
   });
 
   const [files, setFiles] = useState([]);
@@ -89,9 +109,6 @@ const CompilerDojo = () => {
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleCheckboxChange = (name) => (e) =>
-    setFormData((prev) => ({ ...prev, [name]: e.target.checked }));
-
   const handleFileChange = (event, sectionName) => {
     const selectedFiles = Array.from(event.target.files);
     selectedFiles.forEach((file) => {
@@ -128,6 +145,39 @@ const CompilerDojo = () => {
   const getFilesBySection = (sectionName) =>
     filePreviews.filter((preview) => preview.section === sectionName);
 
+  const validateRequiredFields = () => {
+    const missingField = REQUIRED_FIELDS.find(
+      ([name]) => !String(formData[name] ?? "").trim()
+    );
+    if (missingField) {
+      const [name, label] = missingField;
+      alert(`Compila il campo obbligatorio: ${label}.`);
+      document.querySelector(`[name="${name}"]`)?.focus();
+      return false;
+    }
+
+    for (const name of ["mailMerchant", "mailAgente"]) {
+      const input = document.querySelector(`[name="${name}"]`);
+      if (input && !input.checkValidity()) {
+        input.reportValidity();
+        input.focus();
+        return false;
+      }
+    }
+
+    if (!sigCanvasRef.current || sigCanvasRef.current.isEmpty()) {
+      alert("La firma merchant è obbligatoria.");
+      setIsSignature1Active(true);
+      return false;
+    }
+    if (!sigCanvasRef2.current || sigCanvasRef2.current.isEmpty()) {
+      alert("La firma agente è obbligatoria.");
+      setIsSignature2Active(true);
+      return false;
+    }
+    return true;
+  };
+
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
     const templateResponse = await fetch("/moduloDojo.pdf");
@@ -141,12 +191,8 @@ const CompilerDojo = () => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const pages = pdfDoc.getPages();
-    if (pages.length < 2) {
-      throw new Error("Il template moduloDojo.pdf deve contenere due pagine.");
-    }
-    const page = pages[0];
-    const approvalPage = pages[1];
+    const page = pdfDoc.getPages()[0];
+    if (!page) throw new Error("Il template moduloDojo.pdf non contiene pagine.");
 
     const drawText = (text, x, y, size = 12, whichFont = font) => {
       page.drawText(sanitizeForWinAnsi(text), {
@@ -179,14 +225,23 @@ const CompilerDojo = () => {
       text,
       x,
       y,
-      { size = 12, maxWidth = 560, lineHeight = 16, whichFont = font } = {}
+      {
+        size = 12,
+        maxWidth = 560,
+        lineHeight = 16,
+        maxLines = Number.POSITIVE_INFINITY,
+        whichFont = font,
+      } = {}
     ) => {
       const blocks = String(text ?? "").split(/\n/);
       let cursorY = y;
+      let linesDrawn = 0;
       for (const block of blocks) {
+        if (linesDrawn >= maxLines) break;
         const content = sanitizeForWinAnsi(block);
         if (!content) {
           cursorY -= lineHeight;
+          linesDrawn += 1;
           continue;
         }
         const words = content.split(/\s+/);
@@ -197,18 +252,22 @@ const CompilerDojo = () => {
           if (testWidth <= maxWidth) {
             line = testLine;
           } else {
-            page.drawText(line, {
-              x,
-              y: cursorY,
-              size,
-              font: whichFont,
-              color: rgb(0, 0, 0),
-            });
-            cursorY -= lineHeight;
+            if (line) {
+              if (linesDrawn >= maxLines) break;
+              page.drawText(line, {
+                x,
+                y: cursorY,
+                size,
+                font: whichFont,
+                color: rgb(0, 0, 0),
+              });
+              cursorY -= lineHeight;
+              linesDrawn += 1;
+            }
             line = words[i];
           }
         }
-        if (line) {
+        if (line && linesDrawn < maxLines) {
           page.drawText(line, {
             x,
             y: cursorY,
@@ -217,71 +276,75 @@ const CompilerDojo = () => {
             color: rgb(0, 0, 0),
           });
           cursorY -= lineHeight;
+          linesDrawn += 1;
         }
       }
       return cursorY;
     };
 
-    // Coordinate del template A4 aggiornato (origine pdf-lib: basso-sinistra).
+    // Coordinate del template aggiornato 810 x 1440 (origine: basso-sinistra).
     const merchantFields = [
-      ["ragione", 721],
-      ["partitaIva", 673],
-      ["codiceFiscale", 625],
-      ["codiceAteco", 577],
-      ["mcc", 529],
-      ["sedeLegale", 481],
-      ["sedeOperativa", 433],
-      ["iban", 385],
-      ["transatoAnnuo", 337],
-      ["numeroPos", 289],
-      ["agente", 241],
+      ["ragione", 1258],
+      ["partitaIva", 1194],
+      ["codiceFiscale", 1130],
+      ["tipoAttivita", 1066],
+      ["mailMerchant", 1002],
+      ["sedeLegale", 938],
+      ["sedeOperativa", 874],
+      ["iban", 810],
+      ["transatoAnnuo", 746],
+      ["agente", 682],
+      ["mailAgente", 608],
     ];
     merchantFields.forEach(([field, y]) =>
-      drawTextFitted(formData[field], 306, y)
+      drawTextFitted(formData[field], 420, y, {
+        size: 17,
+        maxWidth: 315,
+        minSize: 10,
+      })
     );
 
-    drawMultilineText(formData.info, 306, 197, {
-      size: 10,
-      maxWidth: 252,
-      lineHeight: 12,
+    drawTextFitted(formData.canonedojo, 305, 530, {
+      size: 17,
+      maxWidth: 125,
+      minSize: 11,
+      whichFont: fontBold,
     });
-    drawTextFitted(formData.canonedojo, 430, 151, {
-      size: 11,
-      maxWidth: 72,
+    drawTextFitted(formData.noleggioPos, 568, 530, {
+      size: 17,
+      maxWidth: 135,
+      minSize: 11,
       whichFont: fontBold,
     });
 
     const proposalRows = [
-      ["propostaCredito", "credito", 124],
-      ["propostaBancomat", "bancomat", 98],
-      ["propostaDebito", "debito", 72],
+      ["credito", 315, 430],
+      ["amex", 312, 386],
+      ["bancomat", 570, 430],
+      ["debito", 575, 386],
     ];
-    proposalRows.forEach(([checkField, valueField, y]) => {
-      if (formData[checkField]) drawText("X", 28, y, 11, fontBold);
-      drawTextFitted(formData[valueField], 55, y, {
-        size: 10,
-        maxWidth: 28,
-        minSize: 7,
+    proposalRows.forEach(([field, x, y]) => {
+      drawTextFitted(formData[field], x, y, {
+        size: 17,
+        maxWidth: 75,
+        minSize: 11,
+        whichFont: fontBold,
       });
     });
 
-    const drawApprovalText = (text, x, y, size = 11, whichFont = font) => {
-      approvalPage.drawText(sanitizeForWinAnsi(text), {
-        x,
-        y,
-        size,
-        font: whichFont,
-        color: rgb(0, 0, 0),
-      });
-    };
+    drawMultilineText(formData.info, 75, 260, {
+      size: 16,
+      maxWidth: 660,
+      lineHeight: 20,
+      maxLines: 5,
+    });
 
     // Firme
     const firma1 = getFirmaImage();
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      drawApprovalText("Firma del richiedente", 325, 148, 10, fontBold);
-      approvalPage.drawImage(png, { x: 325, y: 82, width: 190, height: 55 });
+      page.drawImage(png, { x: 220, y: 110, width: 210, height: 58 });
     }
     const firma2 =
       sigCanvasRef2.current && !sigCanvasRef2.current.isEmpty()
@@ -290,8 +353,7 @@ const CompilerDojo = () => {
     if (firma2) {
       const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
       const png2 = await pdfDoc.embedPng(bytes2);
-      drawApprovalText("Firma agente / Partner Manager", 55, 148, 10, fontBold);
-      approvalPage.drawImage(png2, { x: 55, y: 82, width: 190, height: 55 });
+      page.drawImage(png2, { x: 555, y: 110, width: 190, height: 58 });
     }
 
     // Salva e mostra anteprima
@@ -307,6 +369,7 @@ const CompilerDojo = () => {
   const scaricaPdf = () => pdfUrl && saveAs(pdfUrl, "modulo_compilato.pdf");
 
   const handleGeneratePdf = async () => {
+    if (!validateRequiredFields()) return;
     try {
       await generaPdfPreview();
     } catch (error) {
@@ -356,20 +419,22 @@ MODULO ATTIVAZIONE DOJO
 Ragione sociale: ${formData.ragione || "-"}
 P.IVA: ${formData.partitaIva || "-"}
 Codice fiscale: ${formData.codiceFiscale || "-"}
-Codice ATECO: ${formData.codiceAteco || "-"}
-MCC: ${formData.mcc || "-"}
+Tipo attività: ${formData.tipoAttivita || "-"}
+Mail merchant: ${formData.mailMerchant || "-"}
 Sede legale: ${formData.sedeLegale || "-"}
 Sede operativa: ${formData.sedeOperativa || "-"}
 IBAN: ${formData.iban || "-"}
 Transato Annuo: ${formData.transatoAnnuo || "-"}
-Numero POS: ${formData.numeroPos || "-"}
 Agente: ${formData.agente || "-"}
+Mail agente: ${formData.mailAgente || "-"}
 
 Proposta:
 Canone mensile: ${formData.canonedojo || "-"}
-Carte di credito: ${formData.propostaCredito ? formData.credito || "SI" : "NO"}
-Bancomat: ${formData.propostaBancomat ? formData.bancomat || "SI" : "NO"}
-Carte di debito: ${formData.propostaDebito ? formData.debito || "SI" : "NO"}
+Noleggio POS: ${formData.noleggioPos || "-"}
+Carte Credit: ${formData.credito || "-"}%
+AMEX: ${formData.amex || "-"}%
+Bancomat: ${formData.bancomat || "-"}%
+Carte Debit: ${formData.debito || "-"}%
 
 Note:
 ${formData.info || "-"}
@@ -378,7 +443,7 @@ ${formData.info || "-"}
     const payload = {
       // campi "umani"
       nome: formData.ragione?.trim() || "Senza nome",
-      email: "",
+      email: formData.mailMerchant.trim(),
       telefono: "",
 
       // corpo email
@@ -421,6 +486,9 @@ ${formData.info || "-"}
         <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center">
           Compilazione modulo PDF
         </h2>
+        <p className="text-center text-sm text-red-700">
+          Tutti i campi e le due firme sono obbligatori.
+        </p>
 
         {/* Dati presenti nel nuovo template */}
         <div className="space-y-3">
@@ -432,21 +500,24 @@ ${formData.info || "-"}
               ["ragione", "Ragione Sociale"],
               ["partitaIva", "P.IVA"],
               ["codiceFiscale", "Codice Fiscale"],
-              ["codiceAteco", "Codice ATECO"],
-              ["mcc", "MCC"],
+              ["tipoAttivita", "Tipo Attività"],
+              ["mailMerchant", "Mail Merchant", "email"],
               ["iban", "IBAN"],
               ["sedeLegale", "Sede Legale"],
               ["sedeOperativa", "Sede Operativa"],
               ["transatoAnnuo", "Transato annuo stimato"],
-              ["numeroPos", "Numero POS"],
               ["agente", "Agente"],
-            ].map(([name, placeholder]) => (
+              ["mailAgente", "Mail Agente", "email"],
+            ].map(([name, placeholder, type = "text"]) => (
               <input
                 key={name}
                 name={name}
-                placeholder={placeholder}
+                type={type}
+                placeholder={`${placeholder} *`}
                 value={formData[name]}
                 onChange={handleChange}
+                required
+                aria-required="true"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               />
             ))}
@@ -460,28 +531,36 @@ ${formData.info || "-"}
           </h3>
           <input
             name="canonedojo"
-            placeholder="Canone mensile in euro"
+            placeholder="Canone mensile in euro *"
             value={formData.canonedojo}
             onChange={handleChange}
+            required
+            aria-required="true"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          />
+          <input
+            name="noleggioPos"
+            placeholder="Noleggio POS in euro *"
+            value={formData.noleggioPos}
+            onChange={handleChange}
+            required
+            aria-required="true"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
           />
           {[
-            ["propostaCredito", "credito", "Carte di credito (%)"],
-            ["propostaBancomat", "bancomat", "Bancomat (%)"],
-            ["propostaDebito", "debito", "Carte di debito (%)"],
-          ].map(([checkName, valueName, label]) => (
-            <div key={checkName} className="flex items-center gap-3">
+            ["credito", "Carte Credit (%)"],
+            ["amex", "AMEX (%)"],
+            ["bancomat", "Bancomat (%)"],
+            ["debito", "Carte Debit (%)"],
+          ].map(([name, label]) => (
+            <div key={name} className="flex items-center gap-3">
               <input
-                type="checkbox"
-                checked={formData[checkName]}
-                onChange={handleCheckboxChange(checkName)}
-                aria-label={`Includi ${label}`}
-              />
-              <input
-                name={valueName}
-                placeholder={label}
-                value={formData[valueName]}
+                name={name}
+                placeholder={`${label} *`}
+                value={formData[name]}
                 onChange={handleChange}
+                required
+                aria-required="true"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
               />
             </div>
@@ -495,9 +574,11 @@ ${formData.info || "-"}
           </h3>
           <textarea
             name="info"
-            placeholder="Note"
+            placeholder="Note *"
             value={formData.info}
             onChange={handleChange}
+            required
+            aria-required="true"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
         </div>
@@ -691,11 +772,11 @@ ${formData.info || "-"}
 
         {/* Firme */}
         <div className="bg-gray-50 p-4 rounded-lg space-y-6">
-          {/* Firma richiedente */}
+          {/* Firma merchant */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <p className="text-blue-900 font-semibold">
-                Firma del richiedente
+                Firma Merchant *
               </p>
               <button
                 onClick={toggleSignature1}
@@ -738,11 +819,11 @@ ${formData.info || "-"}
             )}
           </div>
 
-          {/* Firma agente / Partner Manager */}
+          {/* Firma agente */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <p className="text-blue-900 font-semibold">
-                Firma agente / Partner Manager
+                Firma Agente *
               </p>
               <button
                 onClick={toggleSignature2}
