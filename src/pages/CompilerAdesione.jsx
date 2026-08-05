@@ -31,6 +31,12 @@ const SOFTPOS_PROFILES = [
 
 const CANONE_OPTIONS = [
   {
+    field: "tariffaSoftAnnuale",
+    label: "Tariffa Soft",
+    value: "69 euro annuale IVA compresa",
+    featured: true,
+  },
+  {
     field: "canoneBasicAnnuale",
     label: "Canone annuale Basic",
     value: "99 euro oltre iva",
@@ -91,6 +97,7 @@ const CompilerAdesione = () => {
 
     // SERVIZIO / ECONOMICO
     descrizioneServizio: "",
+    tariffaSoftAnnuale: false,
     canoneBasicMensile: false,
     canoneBasicAnnuale: false,
     canonePlusMensile: false,
@@ -101,6 +108,7 @@ const CompilerAdesione = () => {
     softposBronze: false,
     codiceScontoPrimoAnnoEnabled: false,
     codiceScontoPrimoAnno: "",
+    metodoPagamento: "",
 
     // ✅ AGENTE (NUOVO)
     agenteNomeCognome: "",
@@ -155,6 +163,7 @@ const CompilerAdesione = () => {
     ["legaleCellulare", "Cellulare legale rappresentante"],
     ["legaleMail", "Mail legale rappresentante"],
     ["descrizioneServizio", "Descrizione servizio"],
+    ["metodoPagamento", "Metodo di pagamento"],
     ["agenteNomeCognome", "Nome e cognome agente"],
     ["agenteMail", "Mail agente"],
     ["agenteCellulare", "Cellulare agente"],
@@ -280,9 +289,13 @@ const CompilerAdesione = () => {
   const generaPdfPreview = async () => {
     if (!validateRequiredForm()) return;
 
-    const existingPdfBytes = await fetch("/moduloadesionepartner.pdf").then(
-      (res) => res.arrayBuffer()
+    const templateResponse = await fetch(
+      "/moduloadesione.pdf?v=20260805-tariffa-soft-69"
     );
+    if (!templateResponse.ok) {
+      throw new Error("Il nuovo template moduloadesione.pdf non è disponibile.");
+    }
+    const existingPdfBytes = await templateResponse.arrayBuffer();
 
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
@@ -309,6 +322,39 @@ const CompilerAdesione = () => {
         size,
         font: whichFont,
         color,
+      });
+    };
+
+    const drawTextFittedOn = (
+      page,
+      text,
+      x,
+      y,
+      { size = 10, maxWidth = 200, minSize = 6, whichFont = font } = {}
+    ) => {
+      const safeText = sanitizeForWinAnsi(text || "");
+      if (!safeText) return;
+      const naturalWidth = whichFont.widthOfTextAtSize(safeText, size);
+      const fittedSize =
+        naturalWidth > maxWidth
+          ? Math.max(minSize, (size * maxWidth) / naturalWidth)
+          : size;
+      drawTextOn(page, safeText, x, y, fittedSize, whichFont);
+    };
+
+    const drawDateOn = (page, x, y) => {
+      if (!formData.dataContratto) return;
+      page.drawRectangle({
+        x: x - 2,
+        y: y - 2,
+        width: 78,
+        height: 14,
+        color: rgb(1, 1, 1),
+      });
+      drawTextFittedOn(page, formData.dataContratto, x, y, {
+        size: 10,
+        maxWidth: 75,
+        whichFont: fontBold,
       });
     };
 
@@ -368,38 +414,37 @@ const CompilerAdesione = () => {
 
     // === PAGINA 1 ===
 
-    // Dati azienda (colonna sinistra)
-    drawTextOn(page1, formData.ragioneSociale, 160, 740, 11);
-    drawTextOn(page1, formData.partitaIva, 133, 721, 11);
-    drawTextOn(page1, formData.codiceSdi, 122, 698, 11);
-    drawTextOn(page1, formData.sedeCommerciale, 170, 680, 11);
-    drawTextOn(page1, formData.citta, 105, 660, 11);
-    drawTextOn(page1, formData.cellulareAzienda, 120, 645, 11);
-    drawTextOn(page1, formData.settoreMerceologico, 200, 625, 11);
-
-    // Dati azienda (colonna destra)
-    drawTextOn(page1, formData.codiceFiscaleAzienda, 360, 727, 11);
-    drawTextOn(page1, formData.pec, 360, 703, 11);
-    drawTextOn(page1, formData.provincia, 365, 650, 11);
-    drawTextOn(page1, formData.mailAzienda, 105, 607, 11);
-    drawTextOn(page1, formData.iban, 105, 590, 11);
-
-    // Legale rappresentante
-    drawTextOn(page1, formData.legaleNomeCognome, 152, 530, 11);
-    drawTextOn(page1, formData.legaleCodiceFiscale, 310, 530, 11);
-    drawMultilineTextOn(page1, formData.legaleIndirizzo, 170, 511, {
-      size: 11,
-      maxWidth: 260,
-      lineHeight: 13,
-    });
-    drawTextOn(page1, formData.legaleCellulare, 110, 492, 10);
-    drawTextOn(page1, formData.legaleMail, 320, 488, 10);
+    // Dati azienda e legale, rimappati sul nuovo moduloadesione.pdf.
+    [
+      ["ragioneSociale", 160, 730, 165],
+      ["partitaIva", 130, 709, 190],
+      ["codiceFiscaleAzienda", 355, 713, 180],
+      ["codiceSdi", 125, 688, 195],
+      ["pec", 365, 692, 170],
+      ["sedeCommerciale", 170, 669, 365],
+      ["citta", 98, 651, 210],
+      ["provincia", 370, 638, 165],
+      ["cellulareAzienda", 125, 632, 410],
+      ["settoreMerceologico", 200, 612, 335],
+      ["mailAzienda", 95, 595, 440],
+      ["iban", 95, 575, 440],
+      ["legaleNomeCognome", 158, 519, 120],
+      ["legaleCodiceFiscale", 315, 516, 220],
+      ["legaleIndirizzo", 175, 500, 360],
+      ["legaleCellulare", 115, 479, 155],
+      ["legaleMail", 325, 476, 210],
+    ].forEach(([field, x, y, maxWidth]) =>
+      drawTextFittedOn(page1, formData[field], x, y, {
+        size: 10,
+        maxWidth,
+      })
+    );
 
     // ✅ DESCRIZIONE SERVIZIO: SOLO TESTO (NO PREZZI) in pagina 1
-    drawMultilineTextOn(page1, formData.descrizioneServizio, 70, 275, {
-      size: 11,
-      maxWidth: 360,
-      lineHeight: 13,
+    drawMultilineTextOn(page1, formData.descrizioneServizio, 300, 381, {
+      size: 8,
+      maxWidth: 235,
+      lineHeight: 10,
     });
 
     // ✅ AGENTE (stessa area “personale manager” che avevi)
@@ -413,57 +458,84 @@ const CompilerAdesione = () => {
       formData.agenteCellulare?.trim() || formData.personaleManagerCell?.trim();
 
     // Coordinate: sono quelle che avevi già in basso (le ho mantenute)
-    drawTextOn(page1, agenteNome, 140, 220, 9);
-    drawTextOn(page1, agenteMail, 100, 205, 9);
-    drawTextOn(page1, agenteCell, 110, 187, 9);
+    drawTextFittedOn(page1, agenteNome, 145, 205, {
+      size: 9,
+      maxWidth: 390,
+    });
+    drawTextFittedOn(page1, agenteMail, 145, 190, {
+      size: 9,
+      maxWidth: 390,
+    });
+    drawTextFittedOn(page1, agenteCell, 145, 175, {
+      size: 9,
+      maxWidth: 390,
+    });
 
     // Note
-    drawMultilineTextOn(page1, formData.note, 40, 110, {
-      size: 11,
-      maxWidth: 520,
-      lineHeight: 13,
+    drawMultilineTextOn(page1, formData.note, 105, 137, {
+      size: 9,
+      maxWidth: 430,
+      lineHeight: 11,
     });
+    drawDateOn(page1, 82, 66);
 
     // === PAGINA 2 (data contratto) ===
     if (page2) {
-      if (formData.dataContratto) {
-        drawTextOn(page2, formData.dataContratto, 84, 120, 11);
-      }
+      drawTextFittedOn(page2, formData.ragioneSociale, 40, 764, {
+        size: 8,
+        maxWidth: 400,
+        minSize: 6,
+        whichFont: fontBold,
+      });
+      drawDateOn(page2, 78, 114);
     }
 
     // === PAGINA 3 (X + prezzi SOLO QUI) ===
     if (page3) {
-      if (formData.dataContratto) {
-        drawTextOn(page3, formData.dataContratto, 84, 120, 11);
-      }
+      drawDateOn(page3, 78, 77);
 
       const page3CheckboxMap = [
-        { field: "canoneBasicAnnuale", xCheck: 62, yCheck: 713 },
-        { field: "canonePlusAnnuale", xCheck: 312, yCheck: 710 },
-        { field: "canoneBasicMensile", xCheck: 62, yCheck: 590 },
-        { field: "canonePlusMensile", xCheck: 312, yCheck: 590 },
-        { field: "softposGold", xCheck: 50, yCheck: 307 },
-        { field: "softposPlatinum", xCheck: 190, yCheck: 307 },
-        { field: "softposSilver", xCheck: 335, yCheck: 307 },
-        { field: "softposBronze", xCheck: 468, yCheck: 307 },
+        { field: "tariffaSoftAnnuale", xCheck: 62, yCheck: 717 },
+        { field: "canoneBasicAnnuale", xCheck: 62, yCheck: 685 },
+        { field: "canonePlusAnnuale", xCheck: 310, yCheck: 685 },
+        { field: "canoneBasicMensile", xCheck: 62, yCheck: 557 },
+        { field: "canonePlusMensile", xCheck: 310, yCheck: 557 },
+        { field: "softposGold", xCheck: 76, yCheck: 245 },
+        { field: "softposPlatinum", xCheck: 76, yCheck: 220 },
+        { field: "softposSilver", xCheck: 76, yCheck: 194 },
+        { field: "softposBronze", xCheck: 76, yCheck: 169 },
       ];
 
       page3CheckboxMap.forEach(({ field, xCheck, yCheck }) => {
-        if (formData[field] === true)
-          drawTextOn(page3, "X", xCheck, yCheck, 13, fontBold);
+        if (formData[field] === true) {
+          page3.drawCircle({
+            x: xCheck,
+            y: yCheck,
+            size: 5.5,
+            color: rgb(0.08, 0.16, 0.42),
+          });
+        }
       });
 
       if (formData.codiceScontoPrimoAnnoEnabled === true) {
-        drawTextOn(page3, "X", 62, 530, 13, fontBold);
-        drawTextOn(
-          page3,
-          formData.codiceScontoPrimoAnno || "",
-          352,
-          530,
-          10,
-          font
-        );
+        page3.drawCircle({
+          x: 62,
+          y: 502,
+          size: 5.5,
+          color: rgb(0.08, 0.16, 0.42),
+        });
+        drawTextFittedOn(page3, formData.codiceScontoPrimoAnno, 315, 497, {
+          size: 10,
+          maxWidth: 220,
+          whichFont: fontBold,
+        });
       }
+
+      drawTextFittedOn(page3, formData.metodoPagamento, 165, 460, {
+        size: 10,
+        maxWidth: 340,
+        whichFont: fontBold,
+      });
     }
 
     const pdfBytes = await pdfDoc.save();
@@ -788,22 +860,33 @@ const CompilerAdesione = () => {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {CANONE_OPTIONS.map(({ field, label, value }) => (
+              {CANONE_OPTIONS.map(({ field, label, value, featured }) => (
                 <label
                   key={field}
-                  className={`flex items-start gap-3 rounded-lg border p-3 text-sm sm:text-base ${
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm sm:text-base ${
+                    featured ? "sm:col-span-2 border-2" : ""
+                  } ${
                     formData[field] === true
-                      ? "border-blue-600 bg-blue-50"
-                      : "border-gray-200"
+                      ? featured
+                        ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-100"
+                        : "border-blue-600 bg-blue-50"
+                      : featured
+                        ? "border-emerald-300 bg-emerald-50/40 hover:border-emerald-600"
+                        : "border-gray-200"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={formData[field]}
                     onChange={handleCheckboxChange(field)}
-                    className="mt-1"
+                    className={`mt-1 ${featured ? "h-5 w-5 accent-emerald-600" : ""}`}
                   />
                   <span className="flex flex-col">
+                    {featured && (
+                      <span className="mb-1 w-fit rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                        Nuova tariffa
+                      </span>
+                    )}
                     <span className="font-semibold text-gray-900">{label}</span>
                     <span className="text-sm text-gray-700">{value}</span>
                   </span>
@@ -869,6 +952,15 @@ const CompilerAdesione = () => {
               />
             )}
           </div>
+
+          <input
+            name="metodoPagamento"
+            placeholder="Metodo di pagamento"
+            value={formData.metodoPagamento}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          />
 
           <textarea
             name="descrizioneServizio"
