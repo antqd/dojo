@@ -169,7 +169,6 @@ const CompilerAdesione = () => {
     ["agenteCellulare", "Cellulare agente"],
     ["email_pmanager", "Email P. Manager"],
     ["dataContratto", "Data contratto"],
-    ["note", "Note"],
   ];
 
   const convertFileToBase64 = (file) =>
@@ -1034,7 +1033,6 @@ const CompilerAdesione = () => {
             placeholder="Note"
             value={formData.note}
             onChange={handleChange}
-            required
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
         </div>

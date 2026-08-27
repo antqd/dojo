@@ -47,12 +47,6 @@ export default function MandatoForm() {
   // ===== INVIO BACKOFFICE =====
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
-  const [isStartingYousign, setIsStartingYousign] = useState(false);
-  const [yousignStatus, setYousignStatus] = useState(null);
-  const [yousignSignatureRequestId, setYousignSignatureRequestId] =
-    useState(null);
-  const [isSendingSignedDocument, setIsSendingSignedDocument] = useState(false);
-  const [signedDocumentStatus, setSignedDocumentStatus] = useState(null);
 
   // ===== FIRME: Expo energia + Procacciatore =====
   const [isSigExpoActive, setIsSigExpoActive] = useState(false);
@@ -61,12 +55,19 @@ export default function MandatoForm() {
   const sigExpoRef = useRef(null);
   const sigProcRef = useRef(null);
 
-  const API_YOUSIGN =
-    import.meta.env.VITE_YOUSIGN_API_URL ||
-    "https://api.davveroo.it/api/yousign-signature-request";
-  const API_YOUSIGN_SEND_SIGNED_DOCUMENT =
-    import.meta.env.VITE_YOUSIGN_SEND_SIGNED_DOCUMENT_URL ||
-    "https://api.davveroo.it/api/yousign-send-signed-document";
+  const REQUIRED_FIELDS = [
+    ["ragioneSociale", "Cognome e Nome / Ragione Sociale"],
+    ["rappresentanteLegale", "Rappresentante Legale"],
+    ["dataNascita", "Data di nascita"],
+    ["luogoNascita", "Luogo di nascita"],
+    ["indirizzoSede", "Indirizzo Residenza o Sede Legale"],
+    ["cap", "CAP"], ["comune", "Comune"], ["provincia", "Provincia"],
+    ["numeroDocumento", "Numero documento"], ["dataRilascio", "Data di rilascio"],
+    ["enteRilascio", "Ente di rilascio"], ["codiceFiscale", "Codice Fiscale"],
+    ["partitaIva", "Partita IVA"], ["iscrittoCCIA", "Iscritto CCIA"],
+    ["rea", "Numero REA"], ["telefono", "Telefono"], ["fax", "FAX"],
+    ["cellulare", "Cellulare"], ["email", "E-mail"], ["pec", "PEC"],
+  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,16 +85,28 @@ export default function MandatoForm() {
     return ref.current.getTrimmedCanvas().toDataURL("image/png");
   };
 
-  const normalizePhoneForOtp = (phone) => {
-    const compact = String(phone || "").replace(/[\s().-]/g, "");
-    if (!compact) return "";
-    if (compact.startsWith("+")) return compact;
-    if (compact.startsWith("00")) return `+${compact.slice(2)}`;
-    if (/^3\d{8,10}$/.test(compact)) return `+39${compact}`;
-    return compact;
+  const validateRequiredForm = () => {
+    const missingField = REQUIRED_FIELDS.find(
+      ([field]) => !String(formData[field] ?? "").trim(),
+    );
+    if (missingField) {
+      const [field, label] = missingField;
+      alert(`Compila il campo obbligatorio: ${label}.`);
+      document.querySelector(`[name="${field}"]`)?.focus();
+      return false;
+    }
+    if (!getSigDataUrl(sigExpoRef)) {
+      alert("La firma Expo energia è obbligatoria.");
+      setIsSigExpoActive(true);
+      return false;
+    }
+    if (!getSigDataUrl(sigProcRef)) {
+      alert("La firma Procacciatore è obbligatoria.");
+      setIsSigProcActive(true);
+      return false;
+    }
+    return true;
   };
-
-  const isValidOtpPhone = (phone) => /^\+[1-9]\d{7,14}$/.test(phone);
 
   // ====== COORDINATE CAMPI ======
   const FIELDS = useMemo(
@@ -157,6 +170,7 @@ export default function MandatoForm() {
   };
 
   const generaPdfPreview = async () => {
+    if (!validateRequiredForm()) return;
     setIsGenerating(true);
     try {
       const existingPdfBytes = await fetch("/mandatoenergyplanner.pdf").then(
@@ -254,10 +268,8 @@ export default function MandatoForm() {
     });
 
   const handleSubmitToBackoffice = async () => {
-    // endpoint richiede email (clientEmail)
+    if (!validateRequiredForm()) return;
     const clientEmail = (formData.email || "").trim();
-    if (!clientEmail)
-      return alert("Inserisci l'email (obbligatoria) prima di inviare.");
     if (!pdfUrl) return alert("Genera prima il PDF.");
 
     setSubmitStatus(null);
@@ -318,6 +330,7 @@ export default function MandatoForm() {
     }
   };
 
+  /* Legacy Yousign flow removed.
   const handleStartYousignSignature = async () => {
     if (!pdfUrl) return alert("Genera prima il PDF.");
 
@@ -463,6 +476,8 @@ export default function MandatoForm() {
       setIsSendingSignedDocument(false);
     }
   };
+
+  */
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:py-8 sm:px-6 lg:px-8">
@@ -791,20 +806,6 @@ export default function MandatoForm() {
             {isSubmitting ? "Invio in corso..." : "Invia a Backoffice"}
           </button>
 
-          <button
-            type="button"
-            onClick={handleStartYousignSignature}
-            disabled={isStartingYousign || !pdfUrl}
-            className={`w-full sm:w-auto ${
-              pdfUrl
-                ? "bg-emerald-600 hover:bg-emerald-700"
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white font-semibold px-6 py-3 rounded-full shadow-md transition duration-200 transform hover:scale-105 disabled:transform-none`}
-          >
-            {isStartingYousign
-              ? "Avvio firma..."
-              : "Avvia firma digitale Yousign"}
-          </button>
         </div>
 
         {/* STATUS INVIO */}
@@ -819,37 +820,6 @@ export default function MandatoForm() {
           </div>
         )}
 
-        {yousignStatus === "success" && (
-          <div className="space-y-3 text-center text-emerald-700 font-semibold">
-            <p>
-              Richiesta Yousign creata. Il firmatario ricevera la mail per
-              firma e OTP.
-            </p>
-            {yousignSignatureRequestId && (
-              <button
-                type="button"
-                onClick={handleSendSignedDocument}
-                disabled={isSendingSignedDocument}
-                className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-              >
-                {isSendingSignedDocument
-                  ? "Invio documento..."
-                  : "Invia documento firmato a contratti"}
-              </button>
-            )}
-            {signedDocumentStatus === "success" && (
-              <p>Documento firmato inviato a contratti@davveroo.it.</p>
-            )}
-            {signedDocumentStatus === "error" && (
-              <p className="text-red-600">Invio documento firmato non riuscito.</p>
-            )}
-          </div>
-        )}
-        {yousignStatus === "error" && (
-          <div className="text-center text-red-600 font-semibold">
-            Errore avvio Yousign. Controlla i dati del firmatario.
-          </div>
-        )}
 
         {/* ANTEPRIMA */}
         {pdfUrl && (
