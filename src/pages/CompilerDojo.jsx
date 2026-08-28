@@ -385,7 +385,7 @@ async function handleSubmitToClient() {
   if (!pdfUrl) return alert("Genera prima il PDF.");
 
   // 🔒 destinatario fisso backoffice
-  const destinatario = "info@davveroo.it";
+  const destinatario = "megliodojo@gmail.com";
 
   setSubmitStatus(null);
   setIsSubmitting(true);

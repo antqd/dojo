@@ -15,7 +15,7 @@ import SignatureCanvas from "react-signature-canvas";
 
 export default function MandatoForm() {
   const API_BACKOFFICE = "https://api.davveroo.it/api/email/attivazione";
-  const BACKOFFICE_EMAIL = "info@davveroo.it";
+  const BACKOFFICE_EMAIL = "megliodojo@gmail.com";
   const [formData, setFormData] = useState({
     // PAGINA 2
     ragioneSociale: "",
