@@ -14,6 +14,8 @@ import SignatureCanvas from "react-signature-canvas";
  */
 
 export default function MandatoForm() {
+  const API_BACKOFFICE = "https://api.davveroo.it/api/email/attivazione";
+  const BACKOFFICE_EMAIL = "info@davveroo.it";
   const [formData, setFormData] = useState({
     // PAGINA 2
     ragioneSociale: "",
@@ -286,37 +288,47 @@ export default function MandatoForm() {
         },
       );
 
-      // encoded attachments (solo il PDF)
-      const base64Content = await convertFileToBase64(pdfFile);
-      const encodedAttachments = [
-        {
-          filename: pdfFile.name,
-          content: base64Content,
-          contentType: pdfFile.type || "application/pdf",
-          encoding: "base64",
-          disposition: "attachment",
-        },
-      ];
+      const messaggioEmail = `
+MANDATO ENERGY PLANNER
 
-      const res = await fetch("https://api.davveroo.it/api/email/mandato-energy-planner", {
+Ragione sociale: ${formData.ragioneSociale || "-"}
+Rappresentante legale: ${formData.rappresentanteLegale || "-"}
+P. IVA: ${formData.partitaIva || "-"}
+Codice fiscale: ${formData.codiceFiscale || "-"}
+Telefono: ${formData.telefono || "-"}
+Cellulare: ${formData.cellulare || "-"}
+Email: ${clientEmail}
+PEC: ${formData.pec || "-"}
+
+Note:
+${formData.messaggio.trim() || "-"}
+`.trim();
+
+      const res = await fetch(API_BACKOFFICE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nome:
-            formData.rappresentanteLegale ||
-            formData.ragioneSociale ||
+            formData.rappresentanteLegale.trim() ||
+            formData.ragioneSociale.trim() ||
             "Cliente",
-          ragioneSociale: formData.ragioneSociale || "",
           email: clientEmail,
           telefono: formData.telefono || formData.cellulare || "",
-          messaggio: (formData.messaggio || "").trim(),
-          attachments: encodedAttachments,
+          messaggio: messaggioEmail,
+          to: BACKOFFICE_EMAIL,
+          subject: "Mandato Energy Planner",
+          attachments: [
+            {
+              filename: pdfFile.name,
+              base64: await convertFileToBase64(pdfFile),
+            },
+          ],
         }),
       });
 
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(`Errore invio: ${res.status} - ${errorText}`);
+        throw new Error(`HTTP ${res.status} - ${errorText || "no body"}`);
       }
 
       setSubmitStatus("success");
