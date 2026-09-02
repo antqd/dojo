@@ -25,7 +25,6 @@ const REQUIRED_FIELDS = [
   ["amex", "AMEX"],
   ["bancomat", "Bancomat"],
   ["debito", "Carte Debit"],
-  ["info", "Note"],
 ];
 
 const CompilerDojo = () => {
@@ -396,8 +395,10 @@ async function handleSubmitToClient() {
       type: "application/pdf",
     });
 
-    const allFiles = [pdfFile, ...files];
-    const totalBytes = allFiles.reduce((s, f) => s + (f?.size ?? 0), 0);
+    // I documenti caricati sono facoltativi: al backoffice inviamo sempre e
+    // solo il PDF generato, che contiene dati compilati e firme.
+    const allFiles = [pdfFile];
+    const totalBytes = pdfFile.size;
 
     if (totalBytes > MAX_TOTAL_BYTES) {
       throw new Error(
@@ -487,7 +488,7 @@ ${formData.info || "-"}
           Compilazione modulo PDF
         </h2>
         <p className="text-center text-sm text-red-700">
-          Tutti i campi e le due firme sono obbligatori.
+          Tutti i campi, tranne le note, e le due firme sono obbligatori.
         </p>
 
         {/* Dati presenti nel nuovo template */}
@@ -574,11 +575,9 @@ ${formData.info || "-"}
           </h3>
           <textarea
             name="info"
-            placeholder="Note *"
+            placeholder="Note (facoltative)"
             value={formData.info}
             onChange={handleChange}
-            required
-            aria-required="true"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base h-24 resize-none"
           />
         </div>
