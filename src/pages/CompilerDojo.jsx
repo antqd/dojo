@@ -446,6 +446,9 @@ ${formData.info || "-"}
       nome: formData.ragione?.trim() || "Senza nome",
       email: formData.mailMerchant.trim(),
       telefono: "",
+      // Il servizio email richiede il P. Manager: per il Compiler Dojo
+      // coincide con il destinatario fisso del backoffice.
+      email_pmanager: destinatario,
 
       // corpo email
       messaggio: messaggioEmail,
