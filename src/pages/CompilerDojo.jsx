@@ -10,15 +10,21 @@ import SignatureCanvas from "react-signature-canvas";
 const REQUIRED_FIELDS = [
   ["ragione", "Ragione Sociale"],
   ["partitaIva", "P.IVA"],
-  ["codiceFiscale", "Codice Fiscale"],
+  ["insegna", "Insegna"],
+  ["legaleRappresentante", "Legale Rappresentante"],
+  ["telefonoMobile", "Telefono Mobile"],
   ["tipoAttivita", "Tipo Attività"],
   ["mailMerchant", "Mail Merchant"],
   ["sedeLegale", "Sede Legale"],
   ["sedeOperativa", "Sede Operativa"],
   ["iban", "IBAN"],
   ["transatoAnnuo", "Transato annuo stimato"],
+  ["scontrinoMedio", "Scontrino medio"],
+  ["scontrinoMassimo", "Scontrino massimo"],
   ["agente", "Agente"],
   ["mailAgente", "Mail Agente"],
+  ["presentatore", "Presentatore"],
+  ["ruolo", "Ruolo"],
   ["canonedojo", "Canone mensile"],
   ["noleggioPos", "Noleggio POS"],
   ["credito", "Carte Credit"],
@@ -44,7 +50,9 @@ const CompilerDojo = () => {
   // ======= Stato form e allegati =======
   const [formData, setFormData] = useState({
     partitaIva: "",
-    codiceFiscale: "",
+    insegna: "",
+    legaleRappresentante: "",
+    telefonoMobile: "",
     tipoAttivita: "",
     mailMerchant: "",
     iban: "",
@@ -61,6 +69,10 @@ const CompilerDojo = () => {
     canonedojo: "",
     noleggioPos: "",
     transatoAnnuo: "",
+    scontrinoMedio: "",
+    scontrinoMassimo: "",
+    presentatore: "",
+    ruolo: "",
   });
 
   const [files, setFiles] = useState([]);
@@ -179,9 +191,9 @@ const CompilerDojo = () => {
 
   // ======= Generazione PDF =======
   const generaPdfPreview = async () => {
-    const templateResponse = await fetch("/moduloDojo.pdf");
+    const templateResponse = await fetch("/modulofinale.pdf");
     if (!templateResponse.ok) {
-      throw new Error("Template moduloDojo.pdf non disponibile.");
+      throw new Error("Template modulofinale.pdf non disponibile.");
     }
     const existingPdfBytes = await templateResponse.arrayBuffer();
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -191,7 +203,7 @@ const CompilerDojo = () => {
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     const page = pdfDoc.getPages()[0];
-    if (!page) throw new Error("Il template moduloDojo.pdf non contiene pagine.");
+    if (!page) throw new Error("Il template modulofinale.pdf non contiene pagine.");
 
     const drawText = (text, x, y, size = 12, whichFont = font) => {
       page.drawText(sanitizeForWinAnsi(text), {
@@ -281,61 +293,82 @@ const CompilerDojo = () => {
       return cursorY;
     };
 
-    // Coordinate del template aggiornato 810 x 1440 (origine: basso-sinistra).
+    // Coordinate del template modulofinale.pdf (810 x 1440; origine basso-sinistra).
     const merchantFields = [
-      ["ragione", 1258],
-      ["partitaIva", 1194],
-      ["codiceFiscale", 1130],
-      ["tipoAttivita", 1066],
-      ["mailMerchant", 1002],
-      ["sedeLegale", 938],
-      ["sedeOperativa", 874],
-      ["iban", 810],
-      ["transatoAnnuo", 746],
-      ["agente", 682],
-      ["mailAgente", 608],
+      ["ragione", 1282],
+      ["partitaIva", 1241],
+      ["insegna", 1200],
+      ["legaleRappresentante", 1158],
+      ["telefonoMobile", 1117],
+      ["tipoAttivita", 1075],
+      ["mailMerchant", 1034],
+      ["sedeLegale", 992],
+      ["sedeOperativa", 951],
+      ["iban", 909],
+      ["transatoAnnuo", 868],
+      ["scontrinoMedio", 826],
+      ["scontrinoMassimo", 785],
+      ["agente", 743],
+      ["mailAgente", 702],
     ];
     merchantFields.forEach(([field, y]) =>
-      drawTextFitted(formData[field], 420, y, {
-        size: 17,
+      drawTextFitted(formData[field], 416, y, {
+        size: 12,
         maxWidth: 315,
-        minSize: 10,
+        minSize: 8,
       })
     );
 
-    drawTextFitted(formData.canonedojo, 305, 530, {
-      size: 17,
-      maxWidth: 125,
-      minSize: 11,
+    drawTextFitted(formData.canonedojo, 215, 619, {
+      size: 13,
+      maxWidth: 115,
+      minSize: 9,
       whichFont: fontBold,
     });
-    drawTextFitted(formData.noleggioPos, 568, 530, {
-      size: 17,
-      maxWidth: 135,
-      minSize: 11,
+    drawTextFitted(formData.noleggioPos, 570, 619, {
+      size: 13,
+      maxWidth: 115,
+      minSize: 9,
       whichFont: fontBold,
     });
 
     const proposalRows = [
-      ["credito", 315, 430],
-      ["amex", 312, 386],
-      ["bancomat", 570, 430],
-      ["debito", 575, 386],
+      ["credito", 222, 553],
+      ["amex", 222, 518],
+      ["bancomat", 565, 553],
+      ["debito", 565, 518],
     ];
     proposalRows.forEach(([field, x, y]) => {
       drawTextFitted(formData[field], x, y, {
-        size: 17,
-        maxWidth: 75,
-        minSize: 11,
+        size: 13,
+        maxWidth: 70,
+        minSize: 9,
         whichFont: fontBold,
       });
     });
 
-    drawMultilineText(formData.info, 75, 260, {
-      size: 16,
+    drawTextFitted(formData.presentatore, 75, 393, {
+      size: 13,
+      maxWidth: 375,
+      minSize: 9,
+    });
+    const ruoloOptions = ["Cliente DOJO", "CR cassa", "Altro"];
+    const ruoloY = { "Cliente DOJO": 393, "CR cassa": 358, Altro: 323 };
+    if (ruoloOptions.includes(formData.ruolo)) {
+      const circleX = formData.ruolo === "Cliente DOJO" ? 527 : 521;
+      page.drawCircle({
+        x: circleX,
+        y: ruoloY[formData.ruolo],
+        size: 4.5,
+        color: rgb(0, 0, 0),
+      });
+    }
+
+    drawMultilineText(formData.info, 75, 235, {
+      size: 12,
       maxWidth: 660,
-      lineHeight: 20,
-      maxLines: 5,
+      lineHeight: 16,
+      maxLines: 4,
     });
 
     // Firme
@@ -343,7 +376,7 @@ const CompilerDojo = () => {
     if (firma1) {
       const bytes = await fetch(firma1).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(bytes);
-      page.drawImage(png, { x: 220, y: 110, width: 210, height: 58 });
+      page.drawImage(png, { x: 165, y: 120, width: 160, height: 42 });
     }
     const firma2 =
       sigCanvasRef2.current && !sigCanvasRef2.current.isEmpty()
@@ -352,7 +385,7 @@ const CompilerDojo = () => {
     if (firma2) {
       const bytes2 = await fetch(firma2).then((r) => r.arrayBuffer());
       const png2 = await pdfDoc.embedPng(bytes2);
-      page.drawImage(png2, { x: 555, y: 110, width: 190, height: 58 });
+      page.drawImage(png2, { x: 550, y: 120, width: 140, height: 42 });
     }
 
     // Salva e mostra anteprima
@@ -419,15 +452,21 @@ MODULO ATTIVAZIONE DOJO
 
 Ragione sociale: ${formData.ragione || "-"}
 P.IVA: ${formData.partitaIva || "-"}
-Codice fiscale: ${formData.codiceFiscale || "-"}
+Insegna: ${formData.insegna || "-"}
+Legale rappresentante: ${formData.legaleRappresentante || "-"}
+Telefono mobile: ${formData.telefonoMobile || "-"}
 Tipo attività: ${formData.tipoAttivita || "-"}
 Mail merchant: ${formData.mailMerchant || "-"}
 Sede legale: ${formData.sedeLegale || "-"}
 Sede operativa: ${formData.sedeOperativa || "-"}
 IBAN: ${formData.iban || "-"}
 Transato Annuo: ${formData.transatoAnnuo || "-"}
+Scontrino medio: ${formData.scontrinoMedio || "-"}
+Scontrino massimo: ${formData.scontrinoMassimo || "-"}
 Agente: ${formData.agente || "-"}
 Mail agente: ${formData.mailAgente || "-"}
+Presentatore: ${formData.presentatore || "-"}
+Ruolo: ${formData.ruolo || "-"}
 
 Proposta:
 Canone mensile: ${formData.canonedojo || "-"}
@@ -494,7 +533,7 @@ ${formData.info || "-"}
           Tutti i campi, tranne le note, e le due firme sono obbligatori.
         </p>
 
-        {/* Dati presenti nel nuovo template */}
+        {/* Dati merchant presenti nel template PDF */}
         <div className="space-y-3">
           <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
             Dati merchant
@@ -503,13 +542,17 @@ ${formData.info || "-"}
             {[
               ["ragione", "Ragione Sociale"],
               ["partitaIva", "P.IVA"],
-              ["codiceFiscale", "Codice Fiscale"],
+              ["insegna", "Insegna"],
+              ["legaleRappresentante", "Legale Rappresentante"],
+              ["telefonoMobile", "Telefono Mobile", "tel"],
               ["tipoAttivita", "Tipo Attività"],
               ["mailMerchant", "Mail Merchant", "email"],
-              ["iban", "IBAN"],
               ["sedeLegale", "Sede Legale"],
               ["sedeOperativa", "Sede Operativa"],
+              ["iban", "IBAN"],
               ["transatoAnnuo", "Transato annuo stimato"],
+              ["scontrinoMedio", "Scontrino medio"],
+              ["scontrinoMassimo", "Scontrino massimo"],
               ["agente", "Agente"],
               ["mailAgente", "Mail Agente", "email"],
             ].map(([name, placeholder, type = "text"]) => (
@@ -526,6 +569,35 @@ ${formData.info || "-"}
               />
             ))}
           </div>
+        </div>
+
+        {/* Programma Ambassador */}
+        <div className="space-y-3">
+          <h3 className="text-lg sm:text-xl font-semibold text-blue-900">
+            Programma Ambassador
+          </h3>
+          <input
+            name="presentatore"
+            placeholder="Presentatore *"
+            value={formData.presentatore}
+            onChange={handleChange}
+            required
+            aria-required="true"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          />
+          <fieldset>
+            <legend className="text-sm font-medium text-gray-700 mb-2">Ruolo *</legend>
+            <div className="flex flex-wrap gap-4">
+              {["Cliente DOJO", "CR cassa", "Altro"].map((ruolo) => (
+                <label key={ruolo} className="inline-flex items-center gap-2">
+                  <input type="radio" name="ruolo" value={ruolo}
+                    checked={formData.ruolo === ruolo} onChange={handleChange}
+                    required aria-required="true" />
+                  <span>{ruolo}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </div>
 
         {/* Proposta */}
